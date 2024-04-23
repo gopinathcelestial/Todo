@@ -10,7 +10,7 @@ export const SignUp = () => {
   const handleSubmit = async (event:any) => {
     event.preventDefault();
     try {
-      const response = await axios.post('http://localhost:3000/signup', {
+      const response = await axios.post('http://localhost:3000/auth/signup', {
         email,
         password
       });

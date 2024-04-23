@@ -10,11 +10,13 @@ export const SignIn = () => {
   const handleSubmit = async (event:any) => {
     event.preventDefault();
     try {
-      const response = await axios.post('http://localhost:3000/signin', {
+      const response = await axios.post('http://localhost:3000/auth/signin', {
         email,
         password
-      });
+      },
+    );
       console.log('Sign in response:', response.data);
+      navigate('/todos'); // Redirect to sign-in page after the alert
       // Redirect or handle login success (e.g., store JWT)
     } catch (error:any) {
       console.error('Error signing in:', error.response.data);
