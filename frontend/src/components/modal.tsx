@@ -1,13 +1,55 @@
-import React from 'react';
+import React, { useState } from 'react';
+import axios from 'axios';
+import ReactQuill from 'react-quill'; // Import ReactQuill component
+import 'react-quill/dist/quill.snow.css'; // Import Quill styles
 
-export const Model = ({ isOpen, onClose , title}) => {
-  if (!isOpen) return null; // Render nothing if isOpen is false
+export const Model = ({ isOpen, onClose, title, taskTitle: initialTaskTitle, taskDescription: initialTaskDescription, isCompleted: initialIsCompleted, id: id, onTodoAdded }) => {
+  if (!isOpen) return null;
 
-  const handleSubmit = (event) => {
+  // State for the form inputs
+  const [taskTitle, setTaskTitle] = useState(initialTaskTitle || '');
+  const [taskDescription, setTaskDescription] = useState(initialTaskDescription || '');
+  const [isCompleted, setIsCompleted] = useState(initialIsCompleted || false);
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
     // Perform any form submission logic here
-    // Then close the modal
-    onClose();
+    try {
+      let response;
+      if (title === 'Add new Task') {
+        // Create new task
+        response = await axios.post('http://localhost:3000/api/v1/todos', {
+          title: taskTitle,
+          description: taskDescription,
+          isCompleted: false, // Set initial completion status to false for new tasks
+        }, {
+          withCredentials: true,
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+          }
+        });
+        console.log('Task created:', response.data);
+      } else {
+        // Edit existing task
+        response = await axios.put(`http://localhost:3000/api/v1/todos/${id}`, {
+          title: taskTitle,
+          description: taskDescription,
+          isCompleted: initialIsCompleted, // Keep the original completion status when editing
+        }, {
+          withCredentials: true,
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+          }
+        });
+        console.log('Task updated:', response.data);
+      }
+
+      // Log or handle response data as needed
+      onClose(); // Close the modal after successful submission
+      onTodoAdded();
+    } catch (error) {
+      console.error('Error creating/updating task:', error);
+    }
   };
 
   return (
@@ -16,7 +58,7 @@ export const Model = ({ isOpen, onClose , title}) => {
         <button
           aria-label="close alert"
           className="absolute top-3 right-3 sm:right-4"
-          onClick={handleSubmit}
+          onClick={onClose}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -34,38 +76,40 @@ export const Model = ({ isOpen, onClose , title}) => {
           </svg>
         </button>
         <h2 className="font-medium mb-5 text-lg md:text-2xl">{title}</h2>
-        <form className="flex flex-col stylesInputsField">
+        <form className="flex flex-col stylesInputsField" onSubmit={handleSubmit}>
           <label className="pb-2">
             Title
             <input
               type="text"
-              placeholder="e.g, study for the test"
-              required=""
+              placeholder="e.g., Study for the test"
+              required
               className="w-full rounded"
-              value=""
-              
-            ></input>
-          </label>
-          <label className="pb-2">
-            Date
-            <input
-              type="date"
-              className="w-full"
-              required=""
-              min="2024-4-20"
-              max="2025-4-20"
-              value=""
-            ></input>
+              value={taskTitle}
+              onChange={(e) => setTaskTitle(e.target.value)}
+            />
           </label>
           <label>
             Description (optional)
-            <textarea placeholder="e.g, study for the test" className="w-full">
-              
-            </textarea>
+            <ReactQuill
+              value={taskDescription}
+              onChange={setTaskDescription}
+              className="w-full"
+              modules={{
+                toolbar: [
+                  [{ 'header': [1, 2, 3, false] }],
+                  ['bold', 'italic', 'underline'],
+                  ['link'],
+                ],
+              }}
+              formats={[
+                'header',
+                'bold', 'italic', 'underline',
+                'link'
+              ]}
+            />
           </label>
-         
-          <button type="submit" className="btn mt-5" onClick={handleSubmit}>
-          {title}
+          <button type="submit" className="btn mt-5">
+            {title}
           </button>
         </form>
       </div>

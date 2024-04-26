@@ -21,7 +21,7 @@ router.post('/todos', verifyToken, async (req, res) => {
             id: Math.floor(Math.random() * 10000000000),
             title,
             description,
-            isCompleted,
+            isCompleted: false,
             userEmail
         });
         const savedTodo = await todo.save();

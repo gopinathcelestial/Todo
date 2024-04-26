@@ -14,6 +14,13 @@ export const SignIn = () => {
         email,
         password
       },
+      {
+        withCredentials: true,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+  
+      }
+      },
     );
       console.log('Sign in response:', response.data);
       navigate('/todos'); // Redirect to sign-in page after the alert

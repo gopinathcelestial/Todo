@@ -29,15 +29,18 @@ router.post('/signin', async (req, res) => {
         }
         const token = jwt.sign({ email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
         console.log(token)
-        res.cookie('token', token, { httpOnly: true, sameSite: 'None' });
-        res.status(200).json({ message: 'Signin successful' });
+        res.cookie("authorization", `Bearer ${token}`, {
+            httpOnly: true,
+            expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+          });
+          return res.status(200).json({ success: true, data: user });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
 router.post('/signout', (req, res) => {
-    res.clearCookie('token');
+    res.clearCookie('authorization');
     res.status(200).json({ message: 'Signout successful' });
 });
 
