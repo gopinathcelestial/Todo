@@ -23,11 +23,9 @@ export const SignIn = () => {
       },
     );
       console.log('Sign in response:', response.data);
-      navigate('/todos'); // Redirect to sign-in page after the alert
-      // Redirect or handle login success (e.g., store JWT)
+      navigate('/'); 
     } catch (error:any) {
       console.error('Error signing in:', error.response.data);
-      // Handle error (e.g., show error message)
     }
   };
 

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState ,useEffect} from 'react';
 import axios from 'axios';
-import ReactQuill from 'react-quill'; // Import ReactQuill component
-import 'react-quill/dist/quill.snow.css'; // Import Quill styles
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 export const Model = ({ isOpen, onClose, title, taskTitle: initialTaskTitle, taskDescription: initialTaskDescription, isCompleted: initialIsCompleted, id: id, onTodoAdded }) => {
   if (!isOpen) return null;
@@ -11,17 +11,15 @@ export const Model = ({ isOpen, onClose, title, taskTitle: initialTaskTitle, tas
   const [taskDescription, setTaskDescription] = useState(initialTaskDescription || '');
   const [isCompleted, setIsCompleted] = useState(initialIsCompleted || false);
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event:any) => {
     event.preventDefault();
-    // Perform any form submission logic here
     try {
       let response;
       if (title === 'Add new Task') {
-        // Create new task
         response = await axios.post('http://localhost:3000/api/v1/todos', {
           title: taskTitle,
           description: taskDescription,
-          isCompleted: false, // Set initial completion status to false for new tasks
+          isCompleted: false,
         }, {
           withCredentials: true,
           headers: {
@@ -34,7 +32,7 @@ export const Model = ({ isOpen, onClose, title, taskTitle: initialTaskTitle, tas
         response = await axios.put(`http://localhost:3000/api/v1/todos/${id}`, {
           title: taskTitle,
           description: taskDescription,
-          isCompleted: initialIsCompleted, // Keep the original completion status when editing
+          isCompleted: initialIsCompleted,
         }, {
           withCredentials: true,
           headers: {
@@ -44,8 +42,7 @@ export const Model = ({ isOpen, onClose, title, taskTitle: initialTaskTitle, tas
         console.log('Task updated:', response.data);
       }
 
-      // Log or handle response data as needed
-      onClose(); // Close the modal after successful submission
+      onClose();
       onTodoAdded();
     } catch (error) {
       console.error('Error creating/updating task:', error);
@@ -84,14 +81,14 @@ export const Model = ({ isOpen, onClose, title, taskTitle: initialTaskTitle, tas
               placeholder="e.g., Study for the test"
               required
               className="w-full pl-2 mt-1"
-              value={title === 'Add new Task' ? '' : taskTitle}
+              value={taskTitle}
               onChange={(e) => setTaskTitle(e.target.value)}
             />
           </label>
           <label>
             Description (optional)
             <ReactQuill
-              value={title === 'Add new Task' ? '' : taskDescription}
+              value={taskDescription}
               onChange={setTaskDescription}
               className="w-full mt-1"
               modules={{

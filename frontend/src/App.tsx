@@ -8,16 +8,11 @@ function App() {
   return (
     <BrowserRouter>
       <div className="App">
-        <nav>
-          <Link to="/signin">Sign In</Link>
-          <Link to="/signup">Sign Up</Link>
-          <Link to="/todos">Todos</Link>
-        </nav>
         <Routes>
           
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
-          <Route path="/todos" element={<Todos />} />
+          <Route path="/" element={<Todos />} />
         </Routes>
       </div>
     </BrowserRouter>

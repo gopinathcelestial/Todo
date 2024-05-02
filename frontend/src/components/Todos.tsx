@@ -153,7 +153,7 @@ export const Todos = () => {
                   ></path>
                 </svg>
               </button>
-              <a href="/todos" className="flex ms-2 md:me-24">
+              <a href="/" className="flex ms-2 md:me-24">
                 <span className="self-center text-xl font-semibold sm:text-2xl whitespace-nowrap dark:text-white">
                   Tasklist
                 </span>
@@ -243,7 +243,7 @@ export const Todos = () => {
                       <div dangerouslySetInnerHTML={{ __html: todo.description }}></div>
                     </div>
                     <div className="flex border-dashed border-slate-200 dark:border-slate-700/[.3] border-t-2 w-full pt-4 mt-4">
-                      {/* Mark as Completed button */}
+
                       <button
                         title={todo.isCompleted ? 'Mark as Uncompleted' : 'Mark as Completed'}
                         className={`bg-${todo.isCompleted ? 'gray' : 'emerald'}-200 text-${todo.isCompleted ? 'gray' : 'emerald'}-800 mr-4 order-0 rounded-full font-medium`}
@@ -253,7 +253,7 @@ export const Todos = () => {
                           {todo.isCompleted ? 'Completed' : 'Mark as Completed'}
                         </span>
                       </button>
-                      {/* Delete Task button */}
+      
                       <button
                         title="Delete Task"
                         className="ml-2 transition hover:text-slate-700 dark:hover:text-slate-200"
@@ -296,6 +296,7 @@ export const Todos = () => {
                   className="border-2 border-slate-300 text-slate-400 w-full rounded-lg border-dashed transition hover:bg-slate-300 hover:text-slate-500 dark:border-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-300 h-52 sm:h-64"
                   onClick={() => {
                     setModalTitle("Add new Task")
+                    setModalTaskData(null)
                     setIsModalOpen(!isModalOpen)
                   }}
                 >
