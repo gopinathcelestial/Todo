@@ -77,23 +77,23 @@ export const Model = ({ isOpen, onClose, title, taskTitle: initialTaskTitle, tas
         </button>
         <h2 className="font-medium mb-5 text-lg md:text-2xl">{title}</h2>
         <form className="flex flex-col stylesInputsField" onSubmit={handleSubmit}>
-          <label className="pb-2">
+          <label className="pb-4">
             Title
             <input
               type="text"
               placeholder="e.g., Study for the test"
               required
-              className="w-full rounded"
-              value={taskTitle}
+              className="w-full pl-2 mt-1"
+              value={title === 'Add new Task' ? '' : taskTitle}
               onChange={(e) => setTaskTitle(e.target.value)}
             />
           </label>
           <label>
             Description (optional)
             <ReactQuill
-              value={taskDescription}
+              value={title === 'Add new Task' ? '' : taskDescription}
               onChange={setTaskDescription}
-              className="w-full"
+              className="w-full mt-1"
               modules={{
                 toolbar: [
                   [{ 'header': [1, 2, 3, false] }],
@@ -108,9 +108,11 @@ export const Model = ({ isOpen, onClose, title, taskTitle: initialTaskTitle, tas
               ]}
             />
           </label>
-          <button type="submit" className="btn mt-5">
+          <div className='flex justify-center'>
+          <button type="submit" className="btn mt-5 px-2 text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700">
             {title}
           </button>
+          </div>
         </form>
       </div>
     </div>
