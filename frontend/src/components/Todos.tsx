@@ -39,7 +39,7 @@ export const Todos = () => {
       })
       .catch(error => {
         console.error('Error fetching todos:', error);
-        navigate('/signin');
+        navigate('/signin'); 
       });
   };
 
