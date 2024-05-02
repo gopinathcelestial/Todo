@@ -53,6 +53,7 @@ export const Todos = () => {
         withCredentials: true, 
       });
       console.log('Sign out successful:', response.data);
+      alert('Successfully signed Out!');
       navigate('/signin');
 
     } catch (error:any) {

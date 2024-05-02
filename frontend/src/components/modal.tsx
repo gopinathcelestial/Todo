@@ -86,7 +86,7 @@ export const Model = ({ isOpen, onClose, title, taskTitle: initialTaskTitle, tas
             />
           </label>
           <label>
-            Description (optional)
+            Description
             <ReactQuill
               value={taskDescription}
               onChange={setTaskDescription}
