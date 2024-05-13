@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 export const SignUp = () => {
   const [email, setEmail] = useState('');
@@ -14,10 +15,29 @@ export const SignUp = () => {
         email,
         password
       });
-      alert('Successfully signed up!');
+      toast.success('Successfully Signed Up', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: true,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light"
+        });
       navigate('/signin');
     } catch (error:any) {
       if (error.response) {
+        toast.error(JSON.parse(error.response.data.error)[0].message, {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light"
+        });
         console.error('Error signing up:', error.response.data);
         alert('Failed to sign up: ' + JSON.parse(error.response.data.error)[0].message);
       } else {

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid'
 import NotificationSchedulerService from './NotificationSchedulerService';
+import { toast } from 'react-toastify';
 
 
 
@@ -86,6 +87,16 @@ export const Todos = () => {
       })
       .catch(error => {
         console.error('Error fetching todos:', error);
+        toast.error("There is some error while fetching Todos", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light"
+        });
         navigate('/signin');
       });
       if (Notification.permission !== 'granted') {
@@ -103,9 +114,29 @@ export const Todos = () => {
         withCredentials: true, 
       });
       console.log('Sign out successful:', response.data);
+      toast.success('Successfully Signed Out', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: true,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light"
+        });
       navigate('/signin');
 
     } catch (error:any) {
+      toast.error("There is some error while signing out, please try again", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: true,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light"
+      });
       console.error('Error signing out:', error.response ? error.response.data : error);
     }
   };
@@ -131,6 +162,16 @@ export const Todos = () => {
 
       setTodos(updatedTodos);
     } catch (error) {
+      toast.error("There is some issue, please try again", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: true,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light"
+      });
       console.error('Error marking task as completed:', error);
     }
   };
@@ -145,7 +186,27 @@ export const Todos = () => {
       });
 
       fetchTodos();
+      toast.success('Task has been deleted', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: true,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light"
+        });
     } catch (error) {
+      toast.error("There is some issue, please try again", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: true,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light"
+      });
       console.error('Error deleting task:', error);
     }
   };
@@ -310,6 +371,18 @@ export const Todos = () => {
             {title} ({title === "All Tasks" ? allTasksCount : completedTasksCount})
             </h1>
             <ul className="tasksList mt-4 grid gap-2 sm:gap-4 xl:gap-6 2xl:grid-cols-4 xl:grid-cols-3 lg:grid-cols-4 md:grid-cols-3 grid-cols-2 items-end">
+            <li>
+                <button
+                  className="border-2 border-slate-300 text-slate-400 w-full rounded-lg border-dashed transition hover:bg-slate-300 hover:text-slate-500 dark:border-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-300 h-52 sm:h-64"
+                  onClick={() => {
+                    setModalTitle("Add new Task")
+                    setModalTaskData(null)
+                    setIsModalOpen(!isModalOpen)
+                  }}
+                >
+                  Add new task
+                </button>
+              </li>
               {todos.map(todo => (
                 <li key={todo.id}>
                   <article className="bg-slate-100 rounded-lg p-3 sm:p-4 flex text-left transition hover:shadow-lg hover:shadow-slate-300 dark:bg-slate-800 dark:hover:shadow-transparent flex-col h-52 sm:h-64">
@@ -370,18 +443,6 @@ export const Todos = () => {
                   </article>
                 </li>
               ))}
-              <li>
-                <button
-                  className="border-2 border-slate-300 text-slate-400 w-full rounded-lg border-dashed transition hover:bg-slate-300 hover:text-slate-500 dark:border-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-300 h-52 sm:h-64"
-                  onClick={() => {
-                    setModalTitle("Add new Task")
-                    setModalTaskData(null)
-                    setIsModalOpen(!isModalOpen)
-                  }}
-                >
-                  Add new task
-                </button>
-              </li>
             </ul>
               </>
            )}

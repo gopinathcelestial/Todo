@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 export const SignIn = () => {
   const [email, setEmail] = useState('');
@@ -23,8 +24,28 @@ export const SignIn = () => {
       },
     );
       console.log('Sign in response:', response.data);
+      toast.success('Successfully Signed In', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: true,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light"
+        });
       navigate('/'); 
     } catch (error:any) {
+      toast.error(error.response.data.message, {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: true,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light"
+      });
       console.error('Error signing in:', error.response.data);
     }
   };
