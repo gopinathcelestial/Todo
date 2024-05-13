@@ -104,18 +104,6 @@ export const Model = ({
     }
   };
 
-  const toggleDueDate = () => {
-    setShowDueDate(!showDueDate);
-  };
-
-  const toggleReminderTime = () => {
-    setShowReminderTime(!showReminderTime);
-  };
-
-  const toggleReminderDays = () => {
-    setShowReminderDays(!showReminderDays);
-  };
-
   return (
     <div className="fixed top-0 left-0 w-full h-full flex items-center justify-center bg-gray-500 bg-opacity-50">
       <div className="relative bg-slate-200 max-w-lg w-full rounded-lg p-3 sm:p-5 flex flex-col justify-start dark:bg-slate-900">
