@@ -16,12 +16,16 @@ router.get('/todos', verifyToken, async (req, res) => {
 router.post('/todos', verifyToken, async (req, res) => {
     try {
         const userEmail = req.user.email;
-        const { title, description, isCompleted } = req.body;
+        console.log(req.body)
+        const { title, description, isCompleted, dueDate, reminderTime, reminderDays } = req.body;
         const todo = new Todo({
             id: Math.floor(Math.random() * 10000000000),
             title,
             description,
             isCompleted: false,
+            dueDate,
+            reminderTime,
+            reminderDays,
             userEmail
         });
         const savedTodo = await todo.save();
@@ -30,6 +34,7 @@ router.post('/todos', verifyToken, async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
 
 router.get('/todos/:id', verifyToken, (req, res) => {
     const userEmail = req.user.email;
@@ -61,7 +66,10 @@ router.put('/todos/:id', verifyToken, (req, res) => {
         {
             title: req.body.title,
             description: req.body.description,
-            isCompleted: req.body.isCompleted
+            isCompleted: req.body.isCompleted,
+            dueDate: req.body.dueDate,
+            reminderDays: req.body.reminderDays,
+            reminderTime: req.body.reminderTime
         }
     })
         .then((data) => {

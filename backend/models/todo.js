@@ -5,6 +5,9 @@ const todoSchema = new mongoose.Schema({
     title: String,
     description: String,
     isCompleted: Boolean,
+    dueDate: Date,
+    reminderTime: String, 
+    reminderDays: [String],
     userEmail: String
 }, {
     collection: 'todo'

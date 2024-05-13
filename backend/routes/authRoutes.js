@@ -3,17 +3,23 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User = require('../models/user');
+const { z } = require('zod');
+
+const signupSchema = z.object({
+    email: z.string().email(),
+    password: z.string().min(6),
+  });
 
 router.post('/signup', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password } = signupSchema.parse(req.body);
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = new User({ email, password: hashedPassword });
         await newUser.save();
         res.status(201).json({ message: 'User created successfully' });
     } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+        res.status(500).json({ error: error.message });
+    }
 });
 
 router.post('/signin', async (req, res) => {

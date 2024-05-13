@@ -15,14 +15,14 @@ export const SignUp = () => {
         password
       });
       alert('Successfully signed up!');
-      navigate('/signin'); // Redirect to sign-in page after the alert
+      navigate('/signin');
     } catch (error:any) {
       if (error.response) {
         console.error('Error signing up:', error.response.data);
-        alert('Failed to sign up: ' + error.response.data.error); // Show a more specific error from the server
+        alert('Failed to sign up: ' + JSON.parse(error.response.data.error)[0].message);
       } else {
         console.error('Error signing up:', error.message);
-        alert('Failed to sign up: ' + error.message); // Fallback error message
+        alert('Failed to sign up: ' + error.message);
       }
     }
   };
