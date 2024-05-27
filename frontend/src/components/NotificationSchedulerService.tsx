@@ -10,12 +10,12 @@ const NotificationSchedulerService = (): NotificationScheduler => {
       if (timeDiff<0){
         return 
       } 
-      setTimeout(() => {
-        const notification = new Notification(title, options);
-        setTimeout(() => {
-          notification.close();
-        }, 10 * 1000);
-      }, timeDiff);
+      // setTimeout(() => {
+      //   const notification = new Notification(title, options);
+      //   setTimeout(() => {
+      //     notification.close();
+      //   }, 10 * 1000);
+      // }, timeDiff);
     };
 
     const showError = () => {

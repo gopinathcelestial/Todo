@@ -38,8 +38,7 @@ export const SignUp = () => {
           progress: undefined,
           theme: "light"
         });
-        console.error('Error signing up:', error.response.data);
-        alert('Failed to sign up: ' + JSON.parse(error.response.data.error)[0].message);
+        console.error('Error signing up:', error.response.data)
       } else {
         console.error('Error signing up:', error.message);
         alert('Failed to sign up: ' + error.message);

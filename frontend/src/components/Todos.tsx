@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Model } from './modal';
-import { useNavigate } from 'react-router-dom';
-import FullCalendar from '@fullcalendar/react';
-import dayGridPlugin from '@fullcalendar/daygrid'
-import NotificationSchedulerService from './NotificationSchedulerService';
-import { toast } from 'react-toastify';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { Model } from "./modal";
+import { useNavigate } from "react-router-dom";
+import FullCalendar from "@fullcalendar/react";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import NotificationSchedulerService from "./NotificationSchedulerService";
+import interactionPlugin from "@fullcalendar/interaction";
+import useSpeechToText from "../hooks/useSpeechToText";
 
-
+import { toast } from "react-toastify";
 
 interface Todo {
   id: number;
@@ -15,59 +16,92 @@ interface Todo {
   description: string;
   isCompleted: boolean;
   dueDate: Date;
-  reminderTime: string
-  reminderDays: Array
+  reminderTime: string;
+  reminderDays: Array;
 }
 
 export const Todos = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalTitle, setModalTitle] = useState('');
+  const [modalTitle, setModalTitle] = useState("");
   const [modalTaskData, setModalTaskData] = useState<Todo | null>(null);
   const [completedTodos, setCompletedTodos] = useState<Todo[]>([]);
   const [allTasksCount, setAllTasksCount] = useState(0);
   const [completedTasksCount, setCompletedTasksCount] = useState(0);
-  const [title, settitle] = useState("All Task");
+  const [title, settitle] = useState("All Tasks");
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
+  const [filteredTodos, setFilteredTodos] = useState<Todo[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortOrder, setSortOrder] = useState("asc");
   const navigate = useNavigate();
+
+  const { isListening, transcript, startListening, stopListening } =
+  useSpeechToText({ continuous: true });
+const startStopListening = (e) => {
+  e.preventDefault();
+  document.getElementById("titleInput")?.focus();
+  isListening ? stopVoiceInput(e) : startListening();
+};
+
+const stopVoiceInput = async (e) => {
+  try {
+    console.log('transcript', transcript)
+    setSearchQuery(transcript)
+    
+  } catch (error) {
+    console.error("Error extracting entities:", error);
+  }
+  stopListening();
+};
 
   const fetchTodos = () => {
     const notificationSchedulerService = NotificationSchedulerService();
 
-    axios.get('http://localhost:3000/api/v1/todos', {
-      withCredentials: true,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-      }
-    })
-      .then(response => {
+    axios
+      .get("http://localhost:3000/api/v1/todos", {
+        withCredentials: true,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+        },
+      })
+      .then((response) => {
         const allTodos = response.data;
         setTodos(allTodos);
         setAllTasksCount(allTodos.length);
 
-        allTodos.forEach(task => {
-          let dueDate = new Date(task.dueDate).toDateString()+' '+"09:00"
-          let dueDateTimestamp = new Date(dueDate).getTime()
-          notificationSchedulerService.scheduleNotification(`Task Reminder: ${task.title}`,{
-            body: `Description: ${task.description}`
-          }, dueDateTimestamp);
+        allTodos.forEach((task) => {
+          let dueDate = new Date(task.dueDate).toDateString() + " " + "09:00";
+          let dueDateTimestamp = new Date(dueDate).getTime();
+          notificationSchedulerService.scheduleNotification(
+            `Task Reminder: ${task.title}`,
+            {
+              body: `Description: ${task.description}`,
+            },
+            dueDateTimestamp
+          );
 
-          const reminderDays = task.reminderDays.map(day => getDayNumber(day.toLowerCase()));
-          const reminderTime = task.reminderTime || '00:00:00';
-        
-          reminderDays.forEach(day => {
+          const reminderDays = task.reminderDays.map((day) =>
+            getDayNumber(day.toLowerCase())
+          );
+          const reminderTime = task.reminderTime || "00:00:00";
+
+          reminderDays.forEach((day) => {
             const reminderDate = new Date();
             const today = new Date();
             const dayDiff = (day - today.getDay() + 7) % 7;
             reminderDate.setDate(reminderDate.getDate() + dayDiff);
-            const [hours, minutes, seconds] = reminderTime.split(':');
+            const [hours, minutes, seconds] = reminderTime.split(":");
             reminderDate.setHours(parseInt(hours));
             reminderDate.setMinutes(parseInt(minutes));
-        
-            notificationSchedulerService.scheduleNotification(`Task Reminder: ${task.title}`,{
-              body: `Description: ${task.description}`
-            }, reminderDate.getTime());
+
+            notificationSchedulerService.scheduleNotification(
+              `Task Reminder: ${task.title}`,
+              {
+                body: `Description: ${task.description}`,
+              },
+              reminderDate.getTime()
+            );
           });
         });
 
@@ -79,15 +113,14 @@ export const Todos = () => {
             wednesday: 3,
             thursday: 4,
             friday: 5,
-            saturday: 6
+            saturday: 6,
           };
           return daysMap[day];
         }
-       
       })
-      .catch(error => {
-        console.error('Error fetching todos:', error);
-        toast.error("There is some error while fetching Todos", {
+      .catch((error) => {
+        console.error("Error fetching todos:", error);
+        toast.error(error.response.data.message, {
           position: "top-right",
           autoClose: 3000,
           hideProgressBar: true,
@@ -95,26 +128,30 @@ export const Todos = () => {
           pauseOnHover: true,
           draggable: true,
           progress: undefined,
-          theme: "light"
+          theme: "light",
         });
-        navigate('/signin');
+        navigate("/signin");
       });
-      if (Notification.permission !== 'granted') {
-        Notification.requestPermission();
-      }
-    };
-    
-    useEffect(() => {
-      fetchTodos();
+    if (Notification.permission !== "granted") {
+      Notification.requestPermission();
+    }
+  };
+
+  useEffect(() => {
+    fetchTodos();
   }, []);
 
   const handleSignOut = async () => {
     try {
-      const response = await axios.post('http://localhost:3000/auth/signout', {}, {
-        withCredentials: true, 
-      });
-      console.log('Sign out successful:', response.data);
-      toast.success('Successfully Signed Out', {
+      const response = await axios.post(
+        "http://localhost:3000/auth/signout",
+        {},
+        {
+          withCredentials: true,
+        }
+      );
+      console.log("Sign out successful:", response.data);
+      toast.success("Successfully Signed Out", {
         position: "top-right",
         autoClose: 3000,
         hideProgressBar: true,
@@ -122,11 +159,10 @@ export const Todos = () => {
         pauseOnHover: true,
         draggable: true,
         progress: undefined,
-        theme: "light"
-        });
-      navigate('/signin');
-
-    } catch (error:any) {
+        theme: "light",
+      });
+      navigate("/signin");
+    } catch (error: any) {
       toast.error("There is some error while signing out, please try again", {
         position: "top-right",
         autoClose: 3000,
@@ -135,28 +171,32 @@ export const Todos = () => {
         pauseOnHover: true,
         draggable: true,
         progress: undefined,
-        theme: "light"
+        theme: "light",
       });
-      console.error('Error signing out:', error.response ? error.response.data : error);
+      console.error(
+        "Error signing out:",
+        error.response ? error.response.data : error
+      );
     }
   };
 
   const handleMarkAsCompleted = async (id: number) => {
     try {
-      const updatedTodos = todos.map(todo => {
+      const updatedTodos = todos.map((todo) => {
         if (todo.id === id) {
           return { ...todo, isCompleted: !todo.isCompleted };
         }
         return todo;
       });
 
-      await axios.put(`http://localhost:3000/api/v1/todos/${id}`,
-        { isCompleted: !todos.find(todo => todo.id === id)?.isCompleted },
+      await axios.put(
+        `http://localhost:3000/api/v1/todos/${id}`,
+        { isCompleted: !todos.find((todo) => todo.id === id)?.isCompleted },
         {
           withCredentials: true,
           headers: {
             "Access-Control-Allow-Origin": "*",
-          }
+          },
         }
       );
 
@@ -170,9 +210,9 @@ export const Todos = () => {
         pauseOnHover: true,
         draggable: true,
         progress: undefined,
-        theme: "light"
+        theme: "light",
       });
-      console.error('Error marking task as completed:', error);
+      console.error("Error marking task as completed:", error);
     }
   };
 
@@ -182,11 +222,11 @@ export const Todos = () => {
         withCredentials: true,
         headers: {
           "Access-Control-Allow-Origin": "*",
-        }
+        },
       });
 
       fetchTodos();
-      toast.success('Task has been deleted', {
+      toast.success("Task has been deleted", {
         position: "top-right",
         autoClose: 3000,
         hideProgressBar: true,
@@ -194,8 +234,8 @@ export const Todos = () => {
         pauseOnHover: true,
         draggable: true,
         progress: undefined,
-        theme: "light"
-        });
+        theme: "light",
+      });
     } catch (error) {
       toast.error("There is some issue, please try again", {
         position: "top-right",
@@ -205,16 +245,16 @@ export const Todos = () => {
         pauseOnHover: true,
         draggable: true,
         progress: undefined,
-        theme: "light"
+        theme: "light",
       });
-      console.error('Error deleting task:', error);
+      console.error("Error deleting task:", error);
     }
   };
 
   const handleEditTask = (todo: Todo) => {
-    console.log(todo)
+    console.log(todo);
     setModalTaskData(todo);
-    setModalTitle('Edit Task');
+    setModalTitle("Edit Task");
     setIsModalOpen(true);
   };
 
@@ -225,82 +265,171 @@ export const Todos = () => {
   };
 
   const handleAllTasksClick = () => {
-    setShowCalendar(false); 
-    settitle("All Tasks")
-
+    setShowCalendar(false);
+    settitle("All Tasks");
+    const sortedTodos = sortTodos(todos);
+    setFilteredTodos(sortedTodos);
   };
-
   const handleCompletedTasksClick = () => {
-    settitle('Completed tasks')
+    settitle("Completed tasks");
     setTodos(completedTodos);
-    setModalTitle('Completed tasks');
+    setModalTitle("Completed tasks");
   };
 
   const handleCalendarViewClick = () => {
-    const updatedCalendarEvents = todos.map(task => {
+    const updatedCalendarEvents = todos.map((task) => {
       const startDate = new Date(task.dueDate);
 
       return {
         title: task.title,
-        date: startDate.toISOString().split('T')[0],
+        date: startDate.toISOString().split("T")[0],
       };
     });
     setCalendarEvents(updatedCalendarEvents);
     setShowCalendar(true);
-    settitle('Calendar View');
+    settitle("Calendar View");
   };
+
+  const toggleSortOrder = () => {
+    const newSortOrder = sortOrder === "asc" ? "desc" : "asc";
+    setSortOrder(newSortOrder);
+    const sortedTodos = sortTodos(todos);
+    setFilteredTodos(sortedTodos);
+  };
+
+  const sortTodos = (todos) => {
+    return todos.sort((a, b) => {
+      const titleA = a.title.toLowerCase();
+      const titleB = b.title.toLowerCase();
+
+      if (sortOrder === "asc") {
+        if (titleA < titleB) return -1;
+        if (titleA > titleB) return 1;
+        return 0;
+      } else {
+        if (titleA < titleB) return 1;
+        if (titleA > titleB) return -1;
+        return 0;
+      }
+    });
+  };
+
+  async function handleDateSelect(selectInfo) {
+    const title = prompt("Enter the title of the todo");
+    const description = prompt("Enter the description of the todo");
+
+    if (title && description) {
+      try {
+        const response = await axios.post(
+          "http://localhost:3000/api/v1/todos",
+          {
+            title: title,
+            description: description,
+            dueDate: selectInfo.startStr,
+            isCompleted: false,
+          },
+          {
+            withCredentials: true,
+            headers: {
+              "Access-Control-Allow-Origin": "*",
+            },
+          }
+        );
+
+        setCalendarEvents((prevEvents) => [
+          ...prevEvents,
+          {
+            title: title,
+            start: selectInfo.startStr,
+            description: description,
+            id: response.data.id,
+          },
+        ]);
+
+        fetchTodos()
+
+        toast.success("Task created successfully", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+        });
+        console.log("Task created:", response.data);
+      } catch (error) {
+        toast.error("Error creating task", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+        });
+        console.error("Error creating/updating task:", error);
+      }
+    } else {
+      toast.error("Title and description are required to create a task", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: true,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+      });
+    }
+  }
+
+  function renderEventContent(eventInfo) {
+    return (
+      <>
+        <b>{eventInfo.timeText}</b>
+      <i>{eventInfo.event.title}</i>
+      </>
+    )
+  }
+  
+
   return (
     <>
+      <nav className="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700 flex items-center justify-between px-3 py-3 lg:px-5">
+        <a
+          href="/"
+          className="text-xl font-semibold sm:text-2xl whitespace-nowrap dark:text-white"
+        >
+          Tasklist
+        </a>
 
-      <nav className="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-        <div className="px-3 py-3 lg:px-5 lg:pl-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center justify-start rtl:justify-end">
-              <button
-                data-drawer-target="logo-sidebar"
-                data-drawer-toggle="logo-sidebar"
-                aria-controls="logo-sidebar"
-                type="button"
-                className="inline-flex items-center p-2 text-sm text-gray-500 rounded-lg sm:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600"
-              >
-                <span className="sr-only">Open sidebar</span>
-                <svg
-                  className="w-6 h-6"
-                  aria-hidden="true"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    clip-rule="evenodd"
-                    fill-rule="evenodd"
-                    d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 10z"
-                  ></path>
-                </svg>
-              </button>
-              <a href="/" className="flex ms-2 md:me-24">
-                <span className="self-center text-xl font-semibold sm:text-2xl whitespace-nowrap dark:text-white">
-                  Tasklist
-                </span>
-              </a>
-            </div>
-            <div className="flex items-center">
-              <div className="flex items-center ms-3">
-                <div>
-                  <button
-                    type="button"
-                    className="flex text-sm "
-                    aria-expanded="false"
-                    data-dropdown-toggle="dropdown-user"
-                    onClick={handleSignOut}>
-                    Sign Out
-                  </button>
-                </div>
-
-              </div>
-            </div>
-          </div>
+        <div className="flex-grow flex justify-center">
+          <input
+            type="text"
+            placeholder="Search tasks..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="px-4 py-2 w-full max-w-md border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+          />
+           <button
+            className="btn px-2 text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700"
+            onClick={startStopListening}
+            id="voiceBtn"
+          >
+            {isListening ? "Stop Voice Input" : "Search via Voice"}
+          </button>
         </div>
+
+        <button
+          type="button"
+          className="text-sm text-gray-500 ml-auto mr-3 md:mr-0 hover:text-gray-700 focus:outline-none"
+          onClick={handleSignOut}
+        >
+          Sign Out
+        </button>
       </nav>
 
       <aside
@@ -315,9 +444,14 @@ export const Todos = () => {
                 href="#"
                 className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
               >
-                <span className="flex-1 ms-3 whitespace-nowrap" onClick={handleAllTasksClick}>All tasks </span>
+                <span
+                  className="flex-1 ms-3 whitespace-nowrap"
+                  onClick={handleAllTasksClick}
+                >
+                  All tasks{" "}
+                </span>
                 <span className="inline-flex items-center justify-center px-2 ms-3 text-sm font-medium text-gray-800 bg-gray-100 rounded-full dark:bg-gray-700 dark:text-gray-300">
-                {allTasksCount}
+                  {allTasksCount}
                 </span>
               </a>
             </li>
@@ -327,7 +461,10 @@ export const Todos = () => {
                 href="#"
                 className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
               >
-                <span className="flex-1 ms-3 whitespace-nowrap" onClick={handleCalendarViewClick}>
+                <span
+                  className="flex-1 ms-3 whitespace-nowrap"
+                  onClick={handleCalendarViewClick}
+                >
                   Calendar View
                 </span>
               </a>
@@ -336,116 +473,212 @@ export const Todos = () => {
         </div>
       </aside>
 
-      <div className="p-4 sm:ml-64">
+      <div className="p-4 pt-7 sm:ml-64">
         <div className="p-4 border-2 border-gray-200 border-dashed rounded-lg dark:border-gray-700 mt-14">
           <Model
             isOpen={isModalOpen}
             onClose={() => setIsModalOpen(false)}
             title={modalTitle}
-            taskTitle={modalTaskData?.title || ''}
-            taskDescription={modalTaskData?.description || ''}
+            taskTitle={modalTaskData?.title || ""}
+            taskDescription={modalTaskData?.description || ""}
             isCompleted={modalTaskData?.isCompleted || false}
             duedate={modalTaskData?.dueDate || ""}
             reminderTime={modalTaskData?.reminderTime || ""}
             reminderDays={modalTaskData?.reminderDays || ""}
-            id={modalTaskData?.id || ''}
+            id={modalTaskData?.id || ""}
             onTodoAdded={handleTodoAdded}
           />
           <section>
-          {showCalendar ? (
-            <>
-            <h1 className="font-medium my-5 text-center sm:text-left sm:my-8 md:text-2xl text-lg dark:text-slate-200">
-            {title}
-            </h1>
-             <FullCalendar
-               plugins={[dayGridPlugin]}
-               initialView="dayGridMonth"
-               weekends={true}  
-               events={calendarEvents}
-               height={520}
-             />
-            </>
-            ) : (
-              <>       
-            <h1 className="font-medium my-5 text-center sm:text-left sm:my-8 md:text-2xl text-lg dark:text-slate-200">
-            {title} ({title === "All Tasks" ? allTasksCount : completedTasksCount})
-            </h1>
-            <ul className="tasksList mt-4 grid gap-2 sm:gap-4 xl:gap-6 2xl:grid-cols-4 xl:grid-cols-3 lg:grid-cols-4 md:grid-cols-3 grid-cols-2 items-end">
-            <li>
-                <button
-                  className="border-2 border-slate-300 text-slate-400 w-full rounded-lg border-dashed transition hover:bg-slate-300 hover:text-slate-500 dark:border-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-300 h-52 sm:h-64"
-                  onClick={() => {
-                    setModalTitle("Add new Task")
-                    setModalTaskData(null)
-                    setIsModalOpen(!isModalOpen)
-                  }}
-                >
-                  Add new task
-                </button>
-              </li>
-              {todos.map(todo => (
-                <li key={todo.id}>
-                  <article className="bg-slate-100 rounded-lg p-3 sm:p-4 flex text-left transition hover:shadow-lg hover:shadow-slate-300 dark:bg-slate-800 dark:hover:shadow-transparent flex-col h-52 sm:h-64">
-                    <div className="flex flex-col flex-1 ">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="block font-medium dark:text-slate-200">
-                          {todo.title}
-                        </span>
-                      </div>
-                      <div dangerouslySetInnerHTML={{ __html: todo.description }}></div>
-                    </div>
-                    <div className="flex border-dashed border-slate-200 dark:border-slate-700/[.3] border-t-2 w-full pt-4 mt-4">
-
-                      <button
-                        title={todo.isCompleted ? 'Mark as Uncompleted' : 'Mark as Completed'}
-                        className={`bg-${todo.isCompleted ? 'gray' : 'emerald'}-200 text-${todo.isCompleted ? 'gray' : 'emerald'}-800 mr-4 order-0 rounded-full font-medium`}
-                        onClick={() => handleMarkAsCompleted(todo.id)}
-                      >
-                        <span className="block py-1 px-3 absolute invisible sm:static sm:visible">
-                          {todo.isCompleted ? 'Completed' : 'Mark as Completed'}
-                        </span>
-                      </button>
-      
-                      <button
-                        title="Delete Task"
-                        className="ml-2 transition hover:text-slate-700 dark:hover:text-slate-200"
-                        onClick={() => handleDeleteTask(todo.id)}
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                          className="w-5 h-5 sm:w-6 sm:h-6"
-                        >
-                          <path
-                            fill-rule="evenodd"
-                            d="M16.5 4.478v.227a48.816 48.816 0 013.878.512.75.75 0 11-.256 1.478l-.209-.035-1.005 13.07a3 3 0 01-2.991 2.77H8.084a3 3 0 01-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 01-.256-1.478A48.567 48.567 0 017.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 013.369 0c1.603.051 2.815 1.387 2.815 2.951zm-6.136-1.452a51.196 51.196 0 013.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 00-6 0v-.113c0-.794.609-1.428 1.364-1.452zm-.355 5.945a.75.75 0 10-1.5.058l.347 9a.75.75 0 101.499-.058l-.346-9zm5.48.058a.75.75 0 10-1.498-.058l-.347 9a.75.75 0 001.5.058l.345-9z"
-                            clip-rule="evenodd"
-                          ></path>
-                        </svg>
-                      </button>
-                      <button
-                        title="edit task"
-                        className="transition w-7 sm:w-8 h-6 sm:h-8 grid place-items-center dark:hover:text-slate-200 hover:text-slate-700"
-                        onClick={() => handleEditTask(todo)}
-
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 128 512"
-                          fill="currentColor"
-                          className="w-4 sm:w-5 h-4 sm:h-5"
-                        >
-                          <path d="M64 360c30.9 0 56 25.1 56 56s-25.1 56-56 56s-56-25.1-56-56s25.1-56 56-56zm0-160c30.9 0 56 25.1 56 56s-25.1 56-56 56s-56-25.1-56-56s25.1-56 56-56zM120 96c0 30.9-25.1 56-56 56S8 126.9 8 96S33.1 40 64 40s56 25.1 56 56z"></path>
-                        </svg>
-                      </button>
-                    </div>
-                  </article>
-                </li>
-              ))}
-            </ul>
+            {showCalendar ? (
+              <>
+                <h1 className="font-medium my-5 text-center sm:text-left sm:my-8 md:text-2xl text-lg dark:text-slate-200">
+                  {title}
+                </h1>
+                <FullCalendar
+                  plugins={[dayGridPlugin, interactionPlugin]}
+                  initialView="dayGridMonth"
+                  weekends={true}
+                  editable={true}
+                  selectable={true}
+                  events={calendarEvents}
+                  eventContent={renderEventContent}
+                  height={520}
+                  select={handleDateSelect}
+                />
               </>
-           )}
+            ) : (
+              <>
+              <div className="flex w-full items-center justify-between">
+
+                <h1 className="font-medium my-5 pl-1 text-center sm:text-left sm:my-8 md:text-2xl text-lg dark:text-slate-200 flex items-center">
+                  {title} (
+                  {title === "All Tasks" ? allTasksCount : completedTasksCount})
+                </h1>
+                  <button
+                    className="ml-2 transition hover:text-slate-700 dark:hover:text-slate-200 pr-10"
+                    onClick={toggleSortOrder}
+                  >
+                    {sortOrder !== "asc" ? (
+                      <svg
+                        fill="#000000"
+                        className="h-13"
+                        width="3rem"
+                        version="1.1"
+                        id="Capa_1"
+                        xmlns="http://www.w3.org/2000/svg"
+                        xmlns:xlink="http://www.w3.org/1999/xlink"
+                        viewBox="0 0 413.156 413.156"
+                        xml:space="preserve"
+                      >
+                        <g>
+                          <path
+                            d="M97.113,127.848c-1.251-2.594-3.877-4.243-6.756-4.243c-0.005,0-0.011,0-0.016,0l-9.018,0.019
+                     c-2.885,0.006-5.512,1.666-6.754,4.271L0.731,282.682c-1.108,2.324-0.947,5.054,0.427,7.231c1.373,2.177,3.769,3.498,6.343,3.498
+                     h11.08c2.891,0,5.524-1.662,6.769-4.271l19.321-40.504h82.928l19.544,40.533c1.251,2.594,3.876,4.243,6.756,4.243H165
+                     c0.008,0,0.015,0,0.019,0c4.143,0,7.5-3.358,7.5-7.5c0-1.359-0.361-2.634-0.993-3.734L97.113,127.848z M56.599,223.636
+                     l29.314-61.453l29.631,61.453H56.599z"
+                          />
+                          <path
+                            d="M412.37,131.916l-3.99-8.014c-1.269-2.547-3.868-4.157-6.714-4.157H289.719c-4.143,0-7.5,3.358-7.5,7.5v10
+                     c0,4.142,3.357,7.5,7.5,7.5h86.968l-95.702,128.506c-1.689,2.267-1.958,5.292-0.698,7.822l3.99,8.015
+                     c1.269,2.547,3.868,4.157,6.714,4.157h111.318c4.142,0,7.5-3.358,7.5-7.5v-10c0-4.142-3.358-7.5-7.5-7.5H315.97l95.702-128.507
+                     C413.36,137.471,413.63,134.447,412.37,131.916z"
+                          />
+                          <path
+                            d="M271.818,222.604l-7.873-6.165c-1.564-1.226-3.55-1.78-5.53-1.54c-1.975,0.241-3.772,1.255-4.999,2.822l-18.231,23.285
+                     v-113.76c0-4.142-3.357-7.5-7.5-7.5h-10c-4.143,0-7.5,3.358-7.5,7.5v113.76l-18.232-23.285c-1.227-1.566-3.024-2.581-4.999-2.822
+                     c-1.981-0.241-3.965,0.314-5.53,1.54l-7.873,6.165c-3.261,2.553-3.835,7.267-1.281,10.528l44.51,56.847
+                     c1.422,1.816,3.6,2.876,5.905,2.876c2.306,0,4.483-1.061,5.905-2.876l44.51-56.847
+                     C275.652,229.871,275.078,225.157,271.818,222.604z"
+                          />
+                        </g>
+                      </svg>
+                    ) : (
+                      <svg
+                        fill="#000000"
+                        className="h-13"
+                        width="3rem"
+                        version="1.1"
+                        id="Capa_1"
+                        xmlns="http://www.w3.org/2000/svg"
+                        xmlns:xlink="http://www.w3.org/1999/xlink"
+                        viewBox="0 0 420.046 420.046"
+                        xml:space="preserve"
+                      >
+                        <g>
+                          <path
+                            d="M344.64,131.293c-1.252-2.594-3.877-4.243-6.756-4.243c-0.006,0-0.012,0-0.016,0l-9.018,0.019
+		c-2.885,0.006-5.512,1.666-6.754,4.271l-73.84,154.787c-1.109,2.324-0.947,5.054,0.426,7.231c1.373,2.177,3.77,3.498,6.344,3.498
+		h11.08c2.891,0,5.523-1.662,6.77-4.271l19.32-40.504h82.928l19.545,40.533c1.25,2.594,3.875,4.243,6.756,4.243h11.102
+		c0.008,0,0.014,0,0.02,0c4.143,0,7.5-3.358,7.5-7.5c0-1.359-0.361-2.634-0.994-3.734L344.64,131.293z M304.124,227.081
+		l29.314-61.453l29.631,61.453H304.124z"
+                          />
+                          <path
+                            d="M132.87,135.361l-3.99-8.014c-1.27-2.547-3.869-4.157-6.715-4.157H10.218c-4.143,0-7.5,3.358-7.5,7.5v10
+		c0,4.142,3.357,7.5,7.5,7.5h86.969L1.484,276.696c-1.688,2.267-1.957,5.292-0.697,7.822l3.99,8.015
+		c1.268,2.547,3.867,4.157,6.713,4.157h111.318c4.143,0,7.5-3.358,7.5-7.5v-10c0-4.142-3.357-7.5-7.5-7.5H36.47l95.701-128.507
+		C133.861,140.916,134.13,137.892,132.87,135.361z"
+                          />
+                          <path
+                            d="M244.65,226.049l-7.873-6.165c-1.564-1.226-3.549-1.78-5.529-1.54c-1.975,0.241-3.773,1.255-5,2.822l-18.23,23.285V130.69
+		c0-4.142-3.357-7.5-7.5-7.5h-10c-4.143,0-7.5,3.358-7.5,7.5v113.76l-18.232-23.285c-1.227-1.566-3.023-2.581-4.998-2.822
+		c-1.982-0.241-3.965,0.314-5.531,1.54l-7.873,6.165c-3.26,2.553-3.834,7.267-1.281,10.528l44.51,56.847
+		c1.422,1.816,3.6,2.876,5.906,2.876c2.305,0,4.482-1.06,5.904-2.876l44.51-56.847C248.486,233.316,247.911,228.602,244.65,226.049z
+		"
+                          />
+                        </g>
+                      </svg>
+                    )}
+                  </button>
+              </div>
+                <ul className="tasksList mt-4 grid gap-2 sm:gap-4 xl:gap-6 2xl:grid-cols-4 xl:grid-cols-3 lg:grid-cols-4 md:grid-cols-3 grid-cols-2 items-end">
+                  <li>
+                    <button
+                      className="border-2 border-slate-300 text-slate-400 w-full rounded-lg border-dashed transition hover:bg-slate-300 hover:text-slate-500 dark:border-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-300 h-52 sm:h-64"
+                      onClick={() => {
+                        setModalTitle("Add new Task");
+                        setModalTaskData(null);
+                        setIsModalOpen(!isModalOpen);
+                      }}
+                    >
+                      Add new task
+                    </button>
+                  </li>
+                  {todos
+                    .filter((item) => {
+                      return searchQuery.toLowerCase() === ""
+                        ? item
+                        : item.title
+                            .toLowerCase()
+                            .includes(searchQuery.toLowerCase());
+                    })
+                    .map((todo) => (
+                      <li key={todo.id}>
+                        <article className="bg-slate-100 rounded-lg p-3 sm:p-4 flex text-left transition hover:shadow-lg hover:shadow-slate-300 dark:bg-slate-800 dark:hover:shadow-transparent flex-col h-52 sm:h-64">
+                          <div className="flex flex-col flex-1 ">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="block font-medium dark:text-slate-200">
+                                {todo.title}
+                              </span>
+                            </div>
+                            <div
+                              dangerouslySetInnerHTML={{
+                                __html: todo.description,
+                              }}
+                            ></div>
+                          </div>
+                          <div className="flex justify-between items-center border-dashed border-slate-200 dark:border-slate-700/[.3] border-t-2 w-full pt-4 mt-4">
+    <button
+        title={todo.isCompleted ? "Mark as Uncompleted" : "Mark as Completed"}
+        className={`${todo.isCompleted ? "bg-emerald-200" : "bg-red-200"} ${todo.isCompleted ? "text-emerald-800" : "text-red-800"} order-0 rounded-full font-medium`}
+        onClick={() => handleMarkAsCompleted(todo.id)}
+    >
+        <span className="block py-1 px-3 absolute invisible sm:static sm:visible">
+            {todo.isCompleted ? "Completed" : "Mark as Completed"}
+        </span>
+    </button>
+    <div className="flex items-center">
+        <button
+            title="Delete Task"
+            className="mr-2 transition hover:text-slate-700 dark:hover:text-slate-200"
+            onClick={() => handleDeleteTask(todo.id)}
+        >
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="w-5 h-5 sm:w-6 sm:h-6"
+            >
+                <path
+                    fillRule="evenodd"
+                    d="M16.5 4.478v.227a48.816 48.816 0 013.878.512.75.75 0 11-.256 1.478l-.209-.035-1.005 13.07a3 3 0 01-2.991 2.77H8.084a3 3 0 01-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 01-.256-1.478A48.567 48.567 0 017.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 013.369 0c1.603.051 2.815 1.387 2.815 2.951zm-6.136-1.452a51.196 51.196 0 013.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 00-6 0v-.113c0-.794.609-1.428 1.364-1.452zm-.355 5.945a.75.75 0 10-1.5.058l.347 9a.75.75 0 101.499-.058l-.346-9zm5.48.058a.75.75 0 10-1.498-.058l-.347 9a.75.75 0 001.5.058l.345-9z"
+                    clipRule="evenodd"
+                />
+            </svg>
+        </button>
+        <button
+            title="Edit Task"
+            className="transition w-7 sm:w-8 h-6 sm:h-8 grid place-items-center dark:hover:text-slate-200 hover:text-slate-700"
+            onClick={() => handleEditTask(todo)}
+        >
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 128 512"
+                fill="currentColor"
+                className="w-4 sm:w-5 h-4 sm:h-5"
+            >
+                <path d="M64 360c30.9 0 56 25.1 56 56s-25.1 56-56 56s-56-25.1-56-56s25.1-56 56-56zm0-160c30.9 0 56 25.1 56 56s-25.1 56-56 56s-56-25.1-56-56s25.1-56 56-56zM120 96c0 30.9-25.1 56-56 56S8 126.9 8 96S33.1 40 64 40s56 25.1 56 56z"></path>
+            </svg>
+        </button>
+    </div>
+</div>
+
+                        </article>
+                      </li>
+                    ))}
+                </ul>
+              </>
+            )}
           </section>
         </div>
       </div>

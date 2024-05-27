@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User = require('../models/user');
 const { z } = require('zod');
+const { verifyToken } = require('../middlewares/auth');
 
 const signupSchema = z.object({
     email: z.string().email(),
@@ -49,5 +50,17 @@ router.post('/signout', (req, res) => {
     res.clearCookie('authorization');
     res.status(200).json({ message: 'Signout successful' });
 });
+
+router.get('/isloggedin', verifyToken, (req, res) => {
+    try {
+      const { email, token } = req.user;
+      const toastMessage = token
+      ? `You are already logged in as ${email}. Sign out to switch accounts.`
+      : 'Please sign in to access your account.';
+      res.status(200).json({ isLoggedIn: true, email , toastMessage});
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 
 module.exports = router;

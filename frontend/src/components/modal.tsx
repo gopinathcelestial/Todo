@@ -3,6 +3,7 @@ import axios from "axios";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { toast } from "react-toastify";
+import useSpeechToText from "../hooks/useSpeechToText";
 
 export const Model = ({
   isOpen,
@@ -17,9 +18,8 @@ export const Model = ({
   id: id,
   onTodoAdded,
 }) => {
-  if (!isOpen) return null;
-
   // State for the form inputs
+  if (!isOpen) return null;
   const [taskTitle, setTaskTitle] = useState(initialTaskTitle || "");
   const [taskDescription, setTaskDescription] = useState(
     initialTaskDescription || ""
@@ -31,6 +31,50 @@ export const Model = ({
   const [showDueDate, setShowDueDate] = useState(false);
   const [showReminderTime, setShowReminderTime] = useState(false);
   const [showReminderDays, setShowReminderDays] = useState(false);
+
+  const { isListening, transcript, startListening, stopListening } =
+    useSpeechToText({ continuous: true });
+  const startStopListening = (e) => {
+    e.preventDefault();
+    document.getElementById("titleInput")?.focus();
+    isListening ? stopVoiceInput(e) : startListening();
+  };
+
+  const stopVoiceInput = async (e) => {
+    try {
+      e.currentTarget.disabled = true;
+      console.log('transcript', transcript)
+    
+      const response = await toast.promise(
+        axios.post(
+          "http://127.0.0.1:8000/extract-entities",
+          { text: transcript },
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        ),
+        {
+          pending: 'Analysing your voice. please wait.',
+          success: 'Todo Updated Successfully',
+          error: 'There is some error. please try again'
+        }
+    );
+      const data = response.data;
+      setTaskTitle(data.title)
+      setTaskDescription(data.description)
+      if(data.due_date){
+        setDueDate(data.due_date)
+      }
+      e.target.disabled = false;
+      console.log("Extracted entities:", data);
+    } catch (error) {
+      console.error("Error extracting entities:", error);
+      e.target.disabled = false;
+    }
+    stopListening();
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -128,26 +172,36 @@ export const Model = ({
           </svg>
         </button>
         <h2 className="font-medium mb-5 text-lg md:text-2xl">{title}</h2>
+        <div className="flex justify-between items-center mb-5">
+          <button
+            className="btn px-2 text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700"
+            onClick={startStopListening}
+            id="voiceBtn"
+          >
+            {isListening ? "Stop Voice Input" : "Add Todo via Voice"}
+          </button>
+        </div>
         <form
           className="flex flex-col stylesInputsField"
           onSubmit={handleSubmit}
         >
-          <label className="pb-4">
+          <label className="pb-4 ">
             Title
             <input
               type="text"
               placeholder="e.g., Study for the test"
               required
               className="w-full pl-2 mt-1"
+              id="titleInput"
               value={taskTitle}
               onChange={(e) => setTaskTitle(e.target.value)}
             />
           </label>
           <label>
-            Description (optional)
+            Description
             <ReactQuill
               value={taskDescription}
-              onChange={setTaskDescription}
+              onChange={(value) => setTaskDescription(value)}
               className="w-full mt-1"
               modules={{
                 toolbar: [
@@ -165,7 +219,7 @@ export const Model = ({
               Due Date
               <input
                 type="date"
-                value={dueDate.substring(0, 10)}
+                value={dueDate.substring(0, 10) || ""}
                 onChange={(e) => setDueDate(e.target.value)}
                 required
                 className="w-full pl-2 mt-1"
@@ -212,33 +266,62 @@ export const Model = ({
               </select>
             </label>
           )}
+<div className="pt-4">
 
-          <div className="flex justify-between pb-4 pt-4">
-            <label className="pb-4">
-              <input
-                type="checkbox"
-                checked={showDueDate}
-                onChange={() => setShowDueDate(!showDueDate)}
-              />
-              Due Date
-            </label>
-            <label className="pb-4">
-              <input
-                type="checkbox"
-                checked={showReminderTime}
-                onChange={() => setShowReminderTime(!showReminderTime)}
-              />
-              Reminder Time
-            </label>
-            <label className="pb-4">
-              <input
-                type="checkbox"
-                checked={showReminderDays}
-                onChange={() => setShowReminderDays(!showReminderDays)}
-              />
-              Reminder Days
-            </label>
-          </div>
+<ul className="items-center w-full text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-lg sm:flex dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+      <li className="w-full border-b border-gray-200 sm:border-b-0 sm:border-r dark:border-gray-600">
+        <div className="flex items-center ps-3">
+          <input
+            id="showDueDate"
+            type="checkbox"
+            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
+            checked={showDueDate}
+            onChange={() => setShowDueDate(!showDueDate)}
+          />
+          <label
+            htmlFor="showDueDate"
+            className="w-full py-3 ms-2 text-sm font-medium text-gray-900 dark:text-gray-300"
+          >
+            Due Date
+          </label>
+        </div>
+      </li>
+      <li className="w-full border-b border-gray-200 sm:border-b-0 sm:border-r dark:border-gray-600">
+        <div className="flex items-center ps-3">
+          <input
+            id="showReminderTime"
+            type="checkbox"
+            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
+            checked={showReminderTime}
+            onChange={() => setShowReminderTime(!showReminderTime)}
+          />
+          <label
+            htmlFor="showReminderTime"
+            className="w-full py-3 ms-2 text-sm font-medium text-gray-900 dark:text-gray-300"
+          >
+            Reminder Time
+          </label>
+        </div>
+      </li>
+      <li className="w-full dark:border-gray-600">
+        <div className="flex items-center ps-3">
+          <input
+            id="showReminderDays"
+            type="checkbox"
+            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
+            checked={showReminderDays}
+            onChange={() => setShowReminderDays(!showReminderDays)}
+          />
+          <label
+            htmlFor="showReminderDays"
+            className="w-full py-3 ms-2 text-sm font-medium text-gray-900 dark:text-gray-300"
+          >
+            Reminder Days
+          </label>
+        </div>
+      </li>
+    </ul>
+</div>
 
           <div className="flex justify-center">
             <button
