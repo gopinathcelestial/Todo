@@ -163,6 +163,7 @@ export const Todos = () => {
           });
       })
       .catch((error) => {
+        navigate("/signin");
         console.error("Error fetching todos:", error);
         toast.error(error.response.data.message || "there is some error while fetching the todos", {
           position: "top-right",
@@ -174,7 +175,6 @@ export const Todos = () => {
           progress: undefined,
           theme: "light",
         });
-        navigate("/signin");
       });
 
     if (Notification.permission !== "granted") {
