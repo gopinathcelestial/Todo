@@ -6,10 +6,8 @@ const NotificationSchedulerService = (): NotificationScheduler => {
   const scheduleNotification = async (title: string, options: NotificationOptions, time: number) => {
     const showNotification = () => {
       let timeDiff = time - new Date().getTime();
+      // if (timeDiff < 0) return;
 
-      if (timeDiff<0){
-        return 
-      } 
       // setTimeout(() => {
       //   const notification = new Notification(title, options);
       //   setTimeout(() => {
@@ -27,20 +25,17 @@ const NotificationSchedulerService = (): NotificationScheduler => {
     };
 
     let granted = false;
-
     if (Notification.permission === 'granted') {
       granted = true;
-    } else if (Notification.permission === 'denied') {
+    } else if (Notification.permission !== 'denied') {
       let permission = await Notification.requestPermission();
-      granted = permission === 'granted' ? true : false;
+      granted = permission === 'granted';
     }
 
     granted ? showNotification() : showError();
   };
 
-  return {
-    scheduleNotification,
-  };
+  return { scheduleNotification };
 };
 
 export default NotificationSchedulerService;

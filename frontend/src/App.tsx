@@ -3,9 +3,8 @@ import "./App.css";
 import { SignIn } from "./components/SignIn";
 import { SignUp } from "./components/SignUp";
 import { Todos } from "./components/Todos";
-import { ToastContainer, toast } from "react-toastify";
+import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import MicrophoneButton from "./components/MicIcon";
 
 function App() {
   return (

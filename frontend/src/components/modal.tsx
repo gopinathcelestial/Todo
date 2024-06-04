@@ -42,38 +42,53 @@ export const Model = ({
 
   const stopVoiceInput = async (e) => {
     try {
+      stopListening();
       e.currentTarget.disabled = true;
       console.log('transcript', transcript)
+      if(transcript === ''){
+        toast.info("I didn't get you, can you say that again?", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+        });
+      }
     
-      const response = await toast.promise(
-        axios.post(
-          "http://127.0.0.1:8000/extract-entities",
-          { text: transcript },
+      if(transcript){
+        const response = await toast.promise(
+          axios.post(
+            "http://127.0.0.1:8000/extract-entities",
+            { text: transcript },
+            {
+              headers: {
+                "Content-Type": "application/json",
+              },
+            }
+          ),
           {
-            headers: {
-              "Content-Type": "application/json",
-            },
+            pending: 'Analysing your voice. please wait.',
+            success: 'Todo Updated Successfully',
+            error: 'There is some error. please try again'
           }
-        ),
-        {
-          pending: 'Analysing your voice. please wait.',
-          success: 'Todo Updated Successfully',
-          error: 'There is some error. please try again'
+      );
+        const data = response.data;
+        setTaskTitle(data.title)
+        setTaskDescription(data.description)
+        if(data.due_date != "No due date found"){
+          setDueDate(data.due_date)
+          setShowDueDate(true)
         }
-    );
-      const data = response.data;
-      setTaskTitle(data.title)
-      setTaskDescription(data.description)
-      if(data.due_date){
-        setDueDate(data.due_date)
+        console.log("Extracted entities:", data);
       }
       e.target.disabled = false;
-      console.log("Extracted entities:", data);
     } catch (error) {
       console.error("Error extracting entities:", error);
       e.target.disabled = false;
     }
-    stopListening();
   };
 
   const handleSubmit = async (event) => {
@@ -173,14 +188,26 @@ export const Model = ({
         </button>
         <h2 className="font-medium mb-5 text-lg md:text-2xl">{title}</h2>
         <div className="flex justify-between items-center mb-5">
-          <button
-            className="btn px-2 text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700"
-            onClick={startStopListening}
-            id="voiceBtn"
+        <button
+          className="btn px-2 text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700 flex items-center"
+          onClick={startStopListening}
+          id="voiceBtn"
+        >
+          {isListening ? "Stop Voice Input" : "Add Todo via Voice"}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 384 512"
+            width="1rem"
+            version="1.1"
+            className={`ml-2 ${isListening ? "animate-blink" : ""}`}
           >
-            {isListening ? "Stop Voice Input" : "Add Todo via Voice"}
-          </button>
-        </div>
+            <path
+              fill={isListening ? "red" : "#c2c2c2"}
+              d="M192 0C139 0 96 43 96 96V256c0 53 43 96 96 96s96-43 96-96V96c0-53-43-96-96-96zM64 216c0-13.3-10.7-24-24-24s-24 10.7-24 24v40c0 89.1 66.2 162.7 152 174.4V464H120c-13.3 0-24 10.7-24 24s10.7 24 24 24h72 72c13.3 0 24-10.7 24-24s-10.7-24-24-24H216V430.4c85.8-11.7 152-85.3 152-174.4V216c0-13.3-10.7-24-24-24s-24 10.7-24 24v40c0 70.7-57.3 128-128 128s-128-57.3-128-128V216z"
+            />
+          </svg>
+        </button>
+      </div>
         <form
           className="flex flex-col stylesInputsField"
           onSubmit={handleSubmit}

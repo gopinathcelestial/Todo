@@ -1,0 +1,15 @@
+@keyframes animate {
+    0% {
+      fill: red;
+    }
+    50% {
+      fill: #c2c2c2;
+    }
+    100% {
+      fill: red;
+    }
+  }
+  
+  .animate-blink {
+    animation: animate 1s linear infinite;
+  }

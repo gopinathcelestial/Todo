@@ -5,3 +5,12 @@
 .ql-container.ql-snow {
     background: white;
 }
+
+@keyframes blink{
+  50%{opacity: .4;}
+  100%{opacity: 1;}
+  }
+
+.animate-blink {
+  animation: blink 1s infinite;
+}

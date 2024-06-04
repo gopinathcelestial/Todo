@@ -7,6 +7,7 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import NotificationSchedulerService from "./NotificationSchedulerService";
 import interactionPlugin from "@fullcalendar/interaction";
 import useSpeechToText from "../hooks/useSpeechToText";
+import "../App.css";
 
 import { toast } from "react-toastify";
 
@@ -18,6 +19,7 @@ interface Todo {
   dueDate: Date;
   reminderTime: string;
   reminderDays: Array;
+  origin: string
 }
 
 export const Todos = () => {
@@ -37,27 +39,39 @@ export const Todos = () => {
   const navigate = useNavigate();
 
   const { isListening, transcript, startListening, stopListening } =
-  useSpeechToText({ continuous: true });
-const startStopListening = (e) => {
-  e.preventDefault();
-  document.getElementById("titleInput")?.focus();
-  isListening ? stopVoiceInput(e) : startListening();
-};
+    useSpeechToText({ continuous: true });
+  const startStopListening = (e) => {
+    e.preventDefault();
+    document.getElementById("titleInput")?.focus();
+    isListening ? stopVoiceInput(e) : startListening();
+  };
 
-const stopVoiceInput = async (e) => {
-  try {
-    console.log('transcript', transcript)
-    setSearchQuery(transcript)
-    
-  } catch (error) {
-    console.error("Error extracting entities:", error);
-  }
-  stopListening();
-};
+  const stopVoiceInput = async (e) => {
+    try {
+      console.log("transcript", transcript);
+      if (transcript === "") {
+        toast.info("I didn't get you, can you say that again?", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+        });
+      }
+      setSearchQuery(transcript);
+    } catch (error) {
+      console.error("Error extracting entities:", error);
+    }
+    stopListening();
+  };
 
   const fetchTodos = () => {
     const notificationSchedulerService = NotificationSchedulerService();
 
+    // Fetch Todos from your DB
     axios
       .get("http://localhost:3000/api/v1/todos", {
         withCredentials: true,
@@ -67,56 +81,86 @@ const stopVoiceInput = async (e) => {
       })
       .then((response) => {
         const allTodos = response.data;
-        setTodos(allTodos);
-        setAllTasksCount(allTodos.length);
 
-        allTodos.forEach((task) => {
-          let dueDate = new Date(task.dueDate).toDateString() + " " + "09:00";
-          let dueDateTimestamp = new Date(dueDate).getTime();
-          notificationSchedulerService.scheduleNotification(
-            `Task Reminder: ${task.title}`,
-            {
-              body: `Description: ${task.description}`,
+        // Fetch events from Google Calendar
+        axios
+          .get("http://localhost:3000/events", {
+            withCredentials: true,
+            headers: {
+              "Access-Control-Allow-Origin": "*",
             },
-            dueDateTimestamp
-          );
+          })
+          .then((eventResponse) => {
+            const calendarEvents = eventResponse.data;
 
-          const reminderDays = task.reminderDays.map((day) =>
-            getDayNumber(day.toLowerCase())
-          );
-          const reminderTime = task.reminderTime || "00:00:00";
+            // Combine todos and calendar events
+            const combinedTodos = [...allTodos, ...calendarEvents];
 
-          reminderDays.forEach((day) => {
-            const reminderDate = new Date();
-            const today = new Date();
-            const dayDiff = (day - today.getDay() + 7) % 7;
-            reminderDate.setDate(reminderDate.getDate() + dayDiff);
-            const [hours, minutes, seconds] = reminderTime.split(":");
-            reminderDate.setHours(parseInt(hours));
-            reminderDate.setMinutes(parseInt(minutes));
+            setTodos(combinedTodos);
+            setAllTasksCount(combinedTodos.length);
 
-            notificationSchedulerService.scheduleNotification(
-              `Task Reminder: ${task.title}`,
-              {
-                body: `Description: ${task.description}`,
-              },
-              reminderDate.getTime()
-            );
+            combinedTodos.forEach((task) => {
+              const dueDate =
+                new Date(task.dueDate).toDateString() + " " + "09:00";
+              const dueDateTimestamp = new Date(dueDate).getTime();
+              notificationSchedulerService.scheduleNotification(
+                `Task Reminder: ${task.title}`,
+                {
+                  body: `Description: ${task.description}`,
+                },
+                dueDateTimestamp
+              );
+
+              const reminderDays = task?.reminderDays?.map((day) =>
+                getDayNumber(day.toLowerCase())
+              );
+              const reminderTime = task?.reminderTime || "00:00:00";
+
+              reminderDays?.forEach((day) => {
+                const reminderDate = new Date();
+                const today = new Date();
+                const dayDiff = (day - today.getDay() + 7) % 7;
+                reminderDate.setDate(reminderDate.getDate() + dayDiff);
+                const [hours, minutes, seconds] = reminderTime.split(":");
+                reminderDate.setHours(parseInt(hours));
+                reminderDate.setMinutes(parseInt(minutes));
+
+                notificationSchedulerService.scheduleNotification(
+                  `Task Reminder: ${task.title}`,
+                  {
+                    body: `Description: ${task.description}`,
+                  },
+                  reminderDate.getTime()
+                );
+              });
+            });
+
+            function getDayNumber(day: string) {
+              const daysMap: { [key: string]: number } = {
+                sunday: 0,
+                monday: 1,
+                tuesday: 2,
+                wednesday: 3,
+                thursday: 4,
+                friday: 5,
+                saturday: 6,
+              };
+              return daysMap[day];
+            }
+          })
+          .catch((error) => {
+            console.error("Error fetching calendar events:", error);
+            toast.error("Error fetching calendar events", {
+              position: "top-right",
+              autoClose: 3000,
+              hideProgressBar: true,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              progress: undefined,
+              theme: "light",
+            });
           });
-        });
-
-        function getDayNumber(day) {
-          const daysMap = {
-            sunday: 0,
-            monday: 1,
-            tuesday: 2,
-            wednesday: 3,
-            thursday: 4,
-            friday: 5,
-            saturday: 6,
-          };
-          return daysMap[day];
-        }
       })
       .catch((error) => {
         console.error("Error fetching todos:", error);
@@ -132,6 +176,7 @@ const stopVoiceInput = async (e) => {
         });
         navigate("/signin");
       });
+
     if (Notification.permission !== "granted") {
       Notification.requestPermission();
     }
@@ -346,7 +391,7 @@ const stopVoiceInput = async (e) => {
           },
         ]);
 
-        fetchTodos()
+        fetchTodos();
 
         toast.success("Task created successfully", {
           position: "top-right",
@@ -390,11 +435,10 @@ const stopVoiceInput = async (e) => {
     return (
       <>
         <b>{eventInfo.timeText}</b>
-      <i>{eventInfo.event.title}</i>
+        <i>{eventInfo.event.title}</i>
       </>
-    )
+    );
   }
-  
 
   return (
     <>
@@ -406,21 +450,31 @@ const stopVoiceInput = async (e) => {
           Tasklist
         </a>
 
-        <div className="flex-grow flex justify-center">
-          <input
-            type="text"
-            placeholder="Search tasks..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="px-4 py-2 w-full max-w-md border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-          />
-           <button
-            className="btn px-2 text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700"
-            onClick={startStopListening}
-            id="voiceBtn"
-          >
-            {isListening ? "Stop Voice Input" : "Search via Voice"}
-          </button>
+        <div className="navbar-end flex-grow flex justify-center">
+          <div className="relative w-full max-w-md">
+            <input
+              type="text"
+              placeholder="Search tasks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="px-4 py-2 w-full border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+            />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 384 512"
+              width="1rem"
+              version="1.1"
+              className={`absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer ${
+                isListening ? "animate-blink" : ""
+              }`}
+              onClick={startStopListening}
+            >
+              <path
+                fill={isListening ? "red" : "#c2c2c2"}
+                d="M192 0C139 0 96 43 96 96V256c0 53 43 96 96 96s96-43 96-96V96c0-53-43-96-96-96zM64 216c0-13.3-10.7-24-24-24s-24 10.7-24 24v40c0 89.1 66.2 162.7 152 174.4V464H120c-13.3 0-24 10.7-24 24s10.7 24 24 24h72 72c13.3 0 24-10.7 24-24s-10.7-24-24-24H216V430.4c85.8-11.7 152-85.3 152-174.4V216c0-13.3-10.7-24-24-24s-24 10.7-24 24v40c0 70.7-57.3 128-128 128s-128-57.3-128-128V216z"
+              />
+            </svg>
+          </div>
         </div>
 
         <button
@@ -508,12 +562,14 @@ const stopVoiceInput = async (e) => {
               </>
             ) : (
               <>
-              <div className="flex w-full items-center justify-between">
-
-                <h1 className="font-medium my-5 pl-1 text-center sm:text-left sm:my-8 md:text-2xl text-lg dark:text-slate-200 flex items-center">
-                  {title} (
-                  {title === "All Tasks" ? allTasksCount : completedTasksCount})
-                </h1>
+                <div className="flex w-full items-center justify-between">
+                  <h1 className="font-medium my-5 pl-1 text-center sm:text-left sm:my-8 md:text-2xl text-lg dark:text-slate-200 flex items-center">
+                    {title} (
+                    {title === "All Tasks"
+                      ? allTasksCount
+                      : completedTasksCount}
+                    )
+                  </h1>
                   <button
                     className="ml-2 transition hover:text-slate-700 dark:hover:text-slate-200 pr-10"
                     onClick={toggleSortOrder}
@@ -590,7 +646,7 @@ const stopVoiceInput = async (e) => {
                       </svg>
                     )}
                   </button>
-              </div>
+                </div>
                 <ul className="tasksList mt-4 grid gap-2 sm:gap-4 xl:gap-6 2xl:grid-cols-4 xl:grid-cols-3 lg:grid-cols-4 md:grid-cols-3 grid-cols-2 items-end">
                   <li>
                     <button
@@ -606,11 +662,11 @@ const stopVoiceInput = async (e) => {
                   </li>
                   {todos
                     .filter((item) => {
-                      return searchQuery.toLowerCase() === ""
-                        ? item
-                        : item.title
-                            .toLowerCase()
-                            .includes(searchQuery.toLowerCase());
+                      const query = searchQuery
+                        ? searchQuery.toLowerCase()
+                        : "";
+                      const title = item.title ? item.title.toLowerCase() : "";
+                      return query === "" ? item : title.includes(query);
                     })
                     .map((todo) => (
                       <li key={todo.id}>
@@ -620,6 +676,7 @@ const stopVoiceInput = async (e) => {
                               <span className="block font-medium dark:text-slate-200">
                                 {todo.title}
                               </span>
+                              <span>{todo.origin === "google" && "G"}</span>
                             </div>
                             <div
                               dangerouslySetInnerHTML={{
@@ -628,51 +685,64 @@ const stopVoiceInput = async (e) => {
                             ></div>
                           </div>
                           <div className="flex justify-between items-center border-dashed border-slate-200 dark:border-slate-700/[.3] border-t-2 w-full pt-4 mt-4">
-    <button
-        title={todo.isCompleted ? "Mark as Uncompleted" : "Mark as Completed"}
-        className={`${todo.isCompleted ? "bg-emerald-200" : "bg-red-200"} ${todo.isCompleted ? "text-emerald-800" : "text-red-800"} order-0 rounded-full font-medium`}
-        onClick={() => handleMarkAsCompleted(todo.id)}
-    >
-        <span className="block py-1 px-3 absolute invisible sm:static sm:visible">
-            {todo.isCompleted ? "Completed" : "Mark as Completed"}
-        </span>
-    </button>
-    <div className="flex items-center">
-        <button
-            title="Delete Task"
-            className="mr-2 transition hover:text-slate-700 dark:hover:text-slate-200"
-            onClick={() => handleDeleteTask(todo.id)}
-        >
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="w-5 h-5 sm:w-6 sm:h-6"
-            >
-                <path
-                    fillRule="evenodd"
-                    d="M16.5 4.478v.227a48.816 48.816 0 013.878.512.75.75 0 11-.256 1.478l-.209-.035-1.005 13.07a3 3 0 01-2.991 2.77H8.084a3 3 0 01-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 01-.256-1.478A48.567 48.567 0 017.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 013.369 0c1.603.051 2.815 1.387 2.815 2.951zm-6.136-1.452a51.196 51.196 0 013.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 00-6 0v-.113c0-.794.609-1.428 1.364-1.452zm-.355 5.945a.75.75 0 10-1.5.058l.347 9a.75.75 0 101.499-.058l-.346-9zm5.48.058a.75.75 0 10-1.498-.058l-.347 9a.75.75 0 001.5.058l.345-9z"
-                    clipRule="evenodd"
-                />
-            </svg>
-        </button>
-        <button
-            title="Edit Task"
-            className="transition w-7 sm:w-8 h-6 sm:h-8 grid place-items-center dark:hover:text-slate-200 hover:text-slate-700"
-            onClick={() => handleEditTask(todo)}
-        >
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 128 512"
-                fill="currentColor"
-                className="w-4 sm:w-5 h-4 sm:h-5"
-            >
-                <path d="M64 360c30.9 0 56 25.1 56 56s-25.1 56-56 56s-56-25.1-56-56s25.1-56 56-56zm0-160c30.9 0 56 25.1 56 56s-25.1 56-56 56s-56-25.1-56-56s25.1-56 56-56zM120 96c0 30.9-25.1 56-56 56S8 126.9 8 96S33.1 40 64 40s56 25.1 56 56z"></path>
-            </svg>
-        </button>
-    </div>
-</div>
-
+                            <button
+                              title={
+                                todo.isCompleted
+                                  ? "Mark as Uncompleted"
+                                  : "Mark as Completed"
+                              }
+                              className={`${
+                                todo.isCompleted
+                                  ? "bg-emerald-200"
+                                  : "bg-red-200"
+                              } ${
+                                todo.isCompleted
+                                  ? "text-emerald-800"
+                                  : "text-red-800"
+                              } order-0 rounded-full font-medium`}
+                              onClick={() => handleMarkAsCompleted(todo.id)}
+                            >
+                              <span className="block py-1 px-3 absolute invisible sm:static sm:visible">
+                                {todo.isCompleted
+                                  ? "Completed"
+                                  : "Mark as Completed"}
+                              </span>
+                            </button>
+                            <div className="flex items-center">
+                              <button
+                                title="Delete Task"
+                                className="mr-2 transition hover:text-slate-700 dark:hover:text-slate-200"
+                                onClick={() => handleDeleteTask(todo.id)}
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 24 24"
+                                  fill="currentColor"
+                                  className="w-5 h-5 sm:w-6 sm:h-6"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M16.5 4.478v.227a48.816 48.816 0 013.878.512.75.75 0 11-.256 1.478l-.209-.035-1.005 13.07a3 3 0 01-2.991 2.77H8.084a3 3 0 01-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 01-.256-1.478A48.567 48.567 0 017.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 013.369 0c1.603.051 2.815 1.387 2.815 2.951zm-6.136-1.452a51.196 51.196 0 013.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 00-6 0v-.113c0-.794.609-1.428 1.364-1.452zm-.355 5.945a.75.75 0 10-1.5.058l.347 9a.75.75 0 101.499-.058l-.346-9zm5.48.058a.75.75 0 10-1.498-.058l-.347 9a.75.75 0 001.5.058l.345-9z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                              </button>
+                              <button
+                                title="Edit Task"
+                                className="transition w-7 sm:w-8 h-6 sm:h-8 grid place-items-center dark:hover:text-slate-200 hover:text-slate-700"
+                                onClick={() => handleEditTask(todo)}
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 128 512"
+                                  fill="currentColor"
+                                  className="w-4 sm:w-5 h-4 sm:h-5"
+                                >
+                                  <path d="M64 360c30.9 0 56 25.1 56 56s-25.1 56-56 56s-56-25.1-56-56s25.1-56 56-56zm0-160c30.9 0 56 25.1 56 56s-25.1 56-56 56s-56-25.1-56-56s25.1-56 56-56zM120 96c0 30.9-25.1 56-56 56S8 126.9 8 96S33.1 40 64 40s56 25.1 56 56z"></path>
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
                         </article>
                       </li>
                     ))}
