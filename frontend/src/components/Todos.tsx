@@ -164,7 +164,7 @@ export const Todos = () => {
       })
       .catch((error) => {
         console.error("Error fetching todos:", error);
-        toast.error(error.response.data.message, {
+        toast.error(error.response.data.message || "there is some error while fetching the todos", {
           position: "top-right",
           autoClose: 3000,
           hideProgressBar: true,
