@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Model } from "./modal";
+import { Model, SyncAcc } from "./modal";
 import { useNavigate } from "react-router-dom";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -18,14 +18,16 @@ interface Todo {
   isCompleted: boolean;
   dueDate: Date;
   reminderTime: string;
-  reminderDays: Array;
+  reminderDays: Array<any>;
   origin: string
 }
 
 export const Todos = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSyncOpen, setIsSyncOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
+  const [SyncTitle, setSyncTitle] = useState("");
   const [modalTaskData, setModalTaskData] = useState<Todo | null>(null);
   const [completedTodos, setCompletedTodos] = useState<Todo[]>([]);
   const [allTasksCount, setAllTasksCount] = useState(0);
@@ -37,16 +39,16 @@ export const Todos = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState("asc");
   const navigate = useNavigate();
-
-  const { isListening, transcript, startListening, stopListening } =
-    useSpeechToText({ continuous: true });
-  const startStopListening = (e) => {
+  const googleIcon = <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="30" height="30" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path></svg>
+  const microsoftIcon = <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="30" height="30" viewBox="0 0 48 48"><path fill="#ff5722" d="M6 6H22V22H6z" transform="rotate(-180 14 14)"></path><path fill="#4caf50" d="M26 6H42V22H26z" transform="rotate(-180 34 14)"></path><path fill="#ffc107" d="M26 26H42V42H26z" transform="rotate(-180 34 34)"></path><path fill="#03a9f4" d="M6 26H22V42H6z" transform="rotate(-180 14 34)"></path></svg>
+  const { isListening, transcript, startListening, stopListening } = useSpeechToText({ continuous: true });
+  const startStopListening = (e: any) => {
     e.preventDefault();
     document.getElementById("titleInput")?.focus();
     isListening ? stopVoiceInput(e) : startListening();
   };
 
-  const stopVoiceInput = async (e) => {
+  const stopVoiceInput = async (e: any) => {
     try {
       console.log("transcript", transcript);
       if (transcript === "") {
@@ -92,8 +94,19 @@ export const Todos = () => {
           })
           .then((eventResponse) => {
             const calendarEvents = eventResponse.data;
+            // // Fetch events from Microsoft Calendar
+            // axios
+            //   .get("http://localhost:3000/microsoft/events", {
+            //     withCredentials: true,
+            //     headers: {
+            //       "Access-Control-Allow-Origin": "*",
+            //     },
+            //   }).then((calendarResponse)=>{
+            //     const microsoftEvents = calendarResponse.data;
 
-            // Combine todos and calendar events
+
+            // // Combine todos and calendar events
+            // const combinedTodos = [...allTodos, ...calendarEvents, ...microsoftEvents];
             const combinedTodos = [...allTodos, ...calendarEvents];
 
             setTodos(combinedTodos);
@@ -111,12 +124,12 @@ export const Todos = () => {
                 dueDateTimestamp
               );
 
-              const reminderDays = task?.reminderDays?.map((day) =>
+              const reminderDays = task?.reminderDays?.map((day: any) =>
                 getDayNumber(day.toLowerCase())
               );
               const reminderTime = task?.reminderTime || "00:00:00";
 
-              reminderDays?.forEach((day) => {
+              reminderDays?.forEach((day: any) => {
                 const reminderDate = new Date();
                 const today = new Date();
                 const dayDiff = (day - today.getDay() + 7) % 7;
@@ -134,22 +147,22 @@ export const Todos = () => {
                 );
               });
             });
+          // });
 
-            function getDayNumber(day: string) {
-              const daysMap: { [key: string]: number } = {
-                sunday: 0,
-                monday: 1,
-                tuesday: 2,
-                wednesday: 3,
-                thursday: 4,
-                friday: 5,
-                saturday: 6,
-              };
-              return daysMap[day];
-            }
-          })
-          .catch((error) => {
-            console.error("Error fetching calendar events:", error);
+        function getDayNumber(day: string) {
+          const daysMap: { [key: string]: number } = {
+            sunday: 0,
+            monday: 1,
+            tuesday: 2,
+            wednesday: 3,
+            thursday: 4,
+            friday: 5,
+            saturday: 6,
+          };
+          return daysMap[day];
+        }
+      }).catch((error) => {
+          console.error("Error fetching calendar events:", error);
             toast.error("Error fetching calendar events", {
               position: "top-right",
               autoClose: 3000,
@@ -342,8 +355,8 @@ export const Todos = () => {
     setFilteredTodos(sortedTodos);
   };
 
-  const sortTodos = (todos) => {
-    return todos.sort((a, b) => {
+  const sortTodos = (todos: any) => {
+    return todos.sort((a: any, b: any) => {
       const titleA = a.title.toLowerCase();
       const titleB = b.title.toLowerCase();
 
@@ -359,7 +372,7 @@ export const Todos = () => {
     });
   };
 
-  async function handleDateSelect(selectInfo) {
+  async function handleDateSelect(selectInfo: any) {
     const title = prompt("Enter the title of the todo");
     const description = prompt("Enter the description of the todo");
 
@@ -431,7 +444,7 @@ export const Todos = () => {
     }
   }
 
-  function renderEventContent(eventInfo) {
+  function renderEventContent(eventInfo: any) {
     return (
       <>
         <b>{eventInfo.timeText}</b>
@@ -464,9 +477,8 @@ export const Todos = () => {
               viewBox="0 0 384 512"
               width="1rem"
               version="1.1"
-              className={`absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer ${
-                isListening ? "animate-blink" : ""
-              }`}
+              className={`absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer ${isListening ? "animate-blink" : ""
+                }`}
               onClick={startStopListening}
             >
               <path
@@ -491,13 +503,14 @@ export const Todos = () => {
         className="fixed top-0 left-0 z-40 w-64 h-screen pt-20 transition-transform -translate-x-full bg-white border-r border-gray-200 sm:translate-x-0 dark:bg-gray-800 dark:border-gray-700"
         aria-label="Sidebar"
       >
-        <div className="h-full px-3 pb-4 overflow-y-auto bg-white dark:bg-gray-800">
+        <div className="h-auto px-3 pb-4 overflow-y-auto bg-white dark:bg-gray-800">
           <ul className="space-y-2 font-medium">
             <li>
               <a
                 href="#"
                 className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
               >
+                <svg fill="#000000" width="30" height="30" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M2,11H8a1,1,0,0,0,1-1V4A1,1,0,0,0,8,3H2A1,1,0,0,0,1,4v6A1,1,0,0,0,2,11ZM3,5H7V9H3ZM23,7a1,1,0,0,1-1,1H12a1,1,0,0,1,0-2H22A1,1,0,0,1,23,7Zm0,10a1,1,0,0,1-1,1H12a1,1,0,0,1,0-2H22A1,1,0,0,1,23,17ZM3.235,19.7,1.281,17.673a1,1,0,0,1,1.438-1.391l1.252,1.3L7.3,14.289A1,1,0,1,1,8.7,15.711l-4.046,4a1,1,0,0,1-.7.289H3.942A1,1,0,0,1,3.235,19.7Z" /></svg>
                 <span
                   className="flex-1 ms-3 whitespace-nowrap"
                   onClick={handleAllTasksClick}
@@ -515,11 +528,34 @@ export const Todos = () => {
                 href="#"
                 className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
               >
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 9H21M7 3V5M17 3V5M6 13H8M6 17H8M11 13H13M11 17H13M16 13H18M16 17H18M6.2 21H17.8C18.9201 21 19.4802 21 19.908 20.782C20.2843 20.5903 20.5903 20.2843 20.782 19.908C21 19.4802 21 18.9201 21 17.8V8.2C21 7.07989 21 6.51984 20.782 6.09202C20.5903 5.71569 20.2843 5.40973 19.908 5.21799C19.4802 5 18.9201 5 17.8 5H6.2C5.0799 5 4.51984 5 4.09202 5.21799C3.71569 5.40973 3.40973 5.71569 3.21799 6.09202C3 6.51984 3 7.07989 3 8.2V17.8C3 18.9201 3 19.4802 3.21799 19.908C3.40973 20.2843 3.71569 20.5903 4.09202 20.782C4.51984 21 5.07989 21 6.2 21Z" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
                 <span
                   className="flex-1 ms-3 whitespace-nowrap"
                   onClick={handleCalendarViewClick}
                 >
                   Calendar View
+                </span>
+              </a>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <ul>
+            <li>
+              <a
+                href="#"
+                className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+              >
+                <span
+                  className="flex-1 ms-3 whitespace-nowrap"
+                  onClick={() => {
+                    setSyncTitle("Sync task from cloud");
+                    setIsSyncOpen(true);
+                  }}
+                >
+                  Sync Accounts
                 </span>
               </a>
             </li>
@@ -541,6 +577,11 @@ export const Todos = () => {
             reminderDays={modalTaskData?.reminderDays || ""}
             id={modalTaskData?.id || ""}
             onTodoAdded={handleTodoAdded}
+          />
+          <SyncAcc
+            title={SyncTitle}
+            isOpen={isSyncOpen}
+            onClose={() => setIsSyncOpen(false)}
           />
           <section>
             {showCalendar ? (
@@ -582,30 +623,30 @@ export const Todos = () => {
                         version="1.1"
                         id="Capa_1"
                         xmlns="http://www.w3.org/2000/svg"
-                        xmlns:xlink="http://www.w3.org/1999/xlink"
+                        xmlnsXlink="http://www.w3.org/1999/xlink"
                         viewBox="0 0 413.156 413.156"
-                        xml:space="preserve"
+                        xmlSpace="preserve"
                       >
                         <g>
                           <path
                             d="M97.113,127.848c-1.251-2.594-3.877-4.243-6.756-4.243c-0.005,0-0.011,0-0.016,0l-9.018,0.019
-                     c-2.885,0.006-5.512,1.666-6.754,4.271L0.731,282.682c-1.108,2.324-0.947,5.054,0.427,7.231c1.373,2.177,3.769,3.498,6.343,3.498
-                     h11.08c2.891,0,5.524-1.662,6.769-4.271l19.321-40.504h82.928l19.544,40.533c1.251,2.594,3.876,4.243,6.756,4.243H165
-                     c0.008,0,0.015,0,0.019,0c4.143,0,7.5-3.358,7.5-7.5c0-1.359-0.361-2.634-0.993-3.734L97.113,127.848z M56.599,223.636
-                     l29.314-61.453l29.631,61.453H56.599z"
+                            c-2.885,0.006-5.512,1.666-6.754,4.271L0.731,282.682c-1.108,2.324-0.947,5.054,0.427,7.231c1.373,2.177,3.769,3.498,6.343,3.498
+                            h11.08c2.891,0,5.524-1.662,6.769-4.271l19.321-40.504h82.928l19.544,40.533c1.251,2.594,3.876,4.243,6.756,4.243H165
+                            c0.008,0,0.015,0,0.019,0c4.143,0,7.5-3.358,7.5-7.5c0-1.359-0.361-2.634-0.993-3.734L97.113,127.848z M56.599,223.636
+                            l29.314-61.453l29.631,61.453H56.599z"
                           />
                           <path
                             d="M412.37,131.916l-3.99-8.014c-1.269-2.547-3.868-4.157-6.714-4.157H289.719c-4.143,0-7.5,3.358-7.5,7.5v10
-                     c0,4.142,3.357,7.5,7.5,7.5h86.968l-95.702,128.506c-1.689,2.267-1.958,5.292-0.698,7.822l3.99,8.015
-                     c1.269,2.547,3.868,4.157,6.714,4.157h111.318c4.142,0,7.5-3.358,7.5-7.5v-10c0-4.142-3.358-7.5-7.5-7.5H315.97l95.702-128.507
-                     C413.36,137.471,413.63,134.447,412.37,131.916z"
+                            c0,4.142,3.357,7.5,7.5,7.5h86.968l-95.702,128.506c-1.689,2.267-1.958,5.292-0.698,7.822l3.99,8.015
+                            c1.269,2.547,3.868,4.157,6.714,4.157h111.318c4.142,0,7.5-3.358,7.5-7.5v-10c0-4.142-3.358-7.5-7.5-7.5H315.97l95.702-128.507
+                            C413.36,137.471,413.63,134.447,412.37,131.916z"
                           />
                           <path
                             d="M271.818,222.604l-7.873-6.165c-1.564-1.226-3.55-1.78-5.53-1.54c-1.975,0.241-3.772,1.255-4.999,2.822l-18.231,23.285
-                     v-113.76c0-4.142-3.357-7.5-7.5-7.5h-10c-4.143,0-7.5,3.358-7.5,7.5v113.76l-18.232-23.285c-1.227-1.566-3.024-2.581-4.999-2.822
-                     c-1.981-0.241-3.965,0.314-5.53,1.54l-7.873,6.165c-3.261,2.553-3.835,7.267-1.281,10.528l44.51,56.847
-                     c1.422,1.816,3.6,2.876,5.905,2.876c2.306,0,4.483-1.061,5.905-2.876l44.51-56.847
-                     C275.652,229.871,275.078,225.157,271.818,222.604z"
+                            v-113.76c0-4.142-3.357-7.5-7.5-7.5h-10c-4.143,0-7.5,3.358-7.5,7.5v113.76l-18.232-23.285c-1.227-1.566-3.024-2.581-4.999-2.822
+                            c-1.981-0.241-3.965,0.314-5.53,1.54l-7.873,6.165c-3.261,2.553-3.835,7.267-1.281,10.528l44.51,56.847
+                            c1.422,1.816,3.6,2.876,5.905,2.876c2.306,0,4.483-1.061,5.905-2.876l44.51-56.847
+                            C275.652,229.871,275.078,225.157,271.818,222.604z"
                           />
                         </g>
                       </svg>
@@ -617,30 +658,30 @@ export const Todos = () => {
                         version="1.1"
                         id="Capa_1"
                         xmlns="http://www.w3.org/2000/svg"
-                        xmlns:xlink="http://www.w3.org/1999/xlink"
+                        xmlnsXlink="http://www.w3.org/1999/xlink"
                         viewBox="0 0 420.046 420.046"
-                        xml:space="preserve"
+                        xmlSpace="preserve"
                       >
                         <g>
                           <path
                             d="M344.64,131.293c-1.252-2.594-3.877-4.243-6.756-4.243c-0.006,0-0.012,0-0.016,0l-9.018,0.019
-		c-2.885,0.006-5.512,1.666-6.754,4.271l-73.84,154.787c-1.109,2.324-0.947,5.054,0.426,7.231c1.373,2.177,3.77,3.498,6.344,3.498
-		h11.08c2.891,0,5.523-1.662,6.77-4.271l19.32-40.504h82.928l19.545,40.533c1.25,2.594,3.875,4.243,6.756,4.243h11.102
-		c0.008,0,0.014,0,0.02,0c4.143,0,7.5-3.358,7.5-7.5c0-1.359-0.361-2.634-0.994-3.734L344.64,131.293z M304.124,227.081
-		l29.314-61.453l29.631,61.453H304.124z"
+                            c-2.885,0.006-5.512,1.666-6.754,4.271l-73.84,154.787c-1.109,2.324-0.947,5.054,0.426,7.231c1.373,2.177,3.77,3.498,6.344,3.498
+                            h11.08c2.891,0,5.523-1.662,6.77-4.271l19.32-40.504h82.928l19.545,40.533c1.25,2.594,3.875,4.243,6.756,4.243h11.102
+                            c0.008,0,0.014,0,0.02,0c4.143,0,7.5-3.358,7.5-7.5c0-1.359-0.361-2.634-0.994-3.734L344.64,131.293z M304.124,227.081
+                            l29.314-61.453l29.631,61.453H304.124z"
                           />
                           <path
                             d="M132.87,135.361l-3.99-8.014c-1.27-2.547-3.869-4.157-6.715-4.157H10.218c-4.143,0-7.5,3.358-7.5,7.5v10
-		c0,4.142,3.357,7.5,7.5,7.5h86.969L1.484,276.696c-1.688,2.267-1.957,5.292-0.697,7.822l3.99,8.015
-		c1.268,2.547,3.867,4.157,6.713,4.157h111.318c4.143,0,7.5-3.358,7.5-7.5v-10c0-4.142-3.357-7.5-7.5-7.5H36.47l95.701-128.507
-		C133.861,140.916,134.13,137.892,132.87,135.361z"
+                            c0,4.142,3.357,7.5,7.5,7.5h86.969L1.484,276.696c-1.688,2.267-1.957,5.292-0.697,7.822l3.99,8.015
+                            c1.268,2.547,3.867,4.157,6.713,4.157h111.318c4.143,0,7.5-3.358,7.5-7.5v-10c0-4.142-3.357-7.5-7.5-7.5H36.47l95.701-128.507
+                            C133.861,140.916,134.13,137.892,132.87,135.361z"
                           />
                           <path
                             d="M244.65,226.049l-7.873-6.165c-1.564-1.226-3.549-1.78-5.529-1.54c-1.975,0.241-3.773,1.255-5,2.822l-18.23,23.285V130.69
-		c0-4.142-3.357-7.5-7.5-7.5h-10c-4.143,0-7.5,3.358-7.5,7.5v113.76l-18.232-23.285c-1.227-1.566-3.023-2.581-4.998-2.822
-		c-1.982-0.241-3.965,0.314-5.531,1.54l-7.873,6.165c-3.26,2.553-3.834,7.267-1.281,10.528l44.51,56.847
-		c1.422,1.816,3.6,2.876,5.906,2.876c2.305,0,4.482-1.06,5.904-2.876l44.51-56.847C248.486,233.316,247.911,228.602,244.65,226.049z
-		"
+                            c0-4.142-3.357-7.5-7.5-7.5h-10c-4.143,0-7.5,3.358-7.5,7.5v113.76l-18.232-23.285c-1.227-1.566-3.023-2.581-4.998-2.822
+                            c-1.982-0.241-3.965,0.314-5.531,1.54l-7.873,6.165c-3.26,2.553-3.834,7.267-1.281,10.528l44.51,56.847
+                            c1.422,1.816,3.6,2.876,5.906,2.876c2.305,0,4.482-1.06,5.904-2.876l44.51-56.847C248.486,233.316,247.911,228.602,244.65,226.049z
+                            "
                           />
                         </g>
                       </svg>
@@ -676,7 +717,7 @@ export const Todos = () => {
                               <span className="block font-medium dark:text-slate-200">
                                 {todo.title}
                               </span>
-                              <span>{todo.origin === "google" && "G"}</span>
+                              <span>{(todo.origin === "google" && googleIcon) || (todo.origin === "microsoft" && microsoftIcon)}</span>
                             </div>
                             <div
                               dangerouslySetInnerHTML={{
@@ -691,15 +732,13 @@ export const Todos = () => {
                                   ? "Mark as Uncompleted"
                                   : "Mark as Completed"
                               }
-                              className={`${
-                                todo.isCompleted
+                              className={`${todo.isCompleted
                                   ? "bg-emerald-200"
                                   : "bg-red-200"
-                              } ${
-                                todo.isCompleted
+                                } ${todo.isCompleted
                                   ? "text-emerald-800"
                                   : "text-red-800"
-                              } order-0 rounded-full font-medium`}
+                                } order-0 rounded-full font-medium`}
                               onClick={() => handleMarkAsCompleted(todo.id)}
                             >
                               <span className="block py-1 px-3 absolute invisible sm:static sm:visible">

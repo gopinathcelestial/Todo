@@ -45,7 +45,7 @@ export const Model = ({
       stopListening();
       e.currentTarget.disabled = true;
       console.log('transcript', transcript)
-      if(transcript === ''){
+      if (transcript === '') {
         toast.info("I didn't get you, can you say that again?", {
           position: "top-right",
           autoClose: 3000,
@@ -57,8 +57,7 @@ export const Model = ({
           theme: "light",
         });
       }
-    
-      if(transcript){
+      if (transcript) {
         const response = await toast.promise(
           axios.post(
             "http://127.0.0.1:8000/extract-entities",
@@ -74,11 +73,11 @@ export const Model = ({
             success: 'Todo Updated Successfully',
             error: 'There is some error. please try again'
           }
-      );
+        );
         const data = response.data;
         setTaskTitle(data.title)
         setTaskDescription(data.description)
-        if(data.due_date != "No due date found"){
+        if (data.due_date != "No due date found") {
           setDueDate(data.due_date)
           setShowDueDate(true)
         }
@@ -91,7 +90,7 @@ export const Model = ({
     }
   };
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event:any) => {
     event.preventDefault();
     try {
       let response;
@@ -188,26 +187,26 @@ export const Model = ({
         </button>
         <h2 className="font-medium mb-5 text-lg md:text-2xl">{title}</h2>
         <div className="flex justify-between items-center mb-5">
-        <button
-          className="btn px-2 text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700 flex items-center"
-          onClick={startStopListening}
-          id="voiceBtn"
-        >
-          {isListening ? "Stop Voice Input" : "Add Todo via Voice"}
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 384 512"
-            width="1rem"
-            version="1.1"
-            className={`ml-2 ${isListening ? "animate-blink" : ""}`}
+          <button
+            className="btn px-2 text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700 flex items-center"
+            onClick={startStopListening}
+            id="voiceBtn"
           >
-            <path
-              fill={isListening ? "red" : "#c2c2c2"}
-              d="M192 0C139 0 96 43 96 96V256c0 53 43 96 96 96s96-43 96-96V96c0-53-43-96-96-96zM64 216c0-13.3-10.7-24-24-24s-24 10.7-24 24v40c0 89.1 66.2 162.7 152 174.4V464H120c-13.3 0-24 10.7-24 24s10.7 24 24 24h72 72c13.3 0 24-10.7 24-24s-10.7-24-24-24H216V430.4c85.8-11.7 152-85.3 152-174.4V216c0-13.3-10.7-24-24-24s-24 10.7-24 24v40c0 70.7-57.3 128-128 128s-128-57.3-128-128V216z"
-            />
-          </svg>
-        </button>
-      </div>
+            {isListening ? "Stop Voice Input" : "Add Todo via Voice"}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 384 512"
+              width="1rem"
+              version="1.1"
+              className={`ml-2 ${isListening ? "animate-blink" : ""}`}
+            >
+              <path
+                fill={isListening ? "red" : "#c2c2c2"}
+                d="M192 0C139 0 96 43 96 96V256c0 53 43 96 96 96s96-43 96-96V96c0-53-43-96-96-96zM64 216c0-13.3-10.7-24-24-24s-24 10.7-24 24v40c0 89.1 66.2 162.7 152 174.4V464H120c-13.3 0-24 10.7-24 24s10.7 24 24 24h72 72c13.3 0 24-10.7 24-24s-10.7-24-24-24H216V430.4c85.8-11.7 152-85.3 152-174.4V216c0-13.3-10.7-24-24-24s-24 10.7-24 24v40c0 70.7-57.3 128-128 128s-128-57.3-128-128V216z"
+              />
+            </svg>
+          </button>
+        </div>
         <form
           className="flex flex-col stylesInputsField"
           onSubmit={handleSubmit}
@@ -293,62 +292,62 @@ export const Model = ({
               </select>
             </label>
           )}
-<div className="pt-4">
+          <div className="pt-4">
 
-<ul className="items-center w-full text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-lg sm:flex dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-      <li className="w-full border-b border-gray-200 sm:border-b-0 sm:border-r dark:border-gray-600">
-        <div className="flex items-center ps-3">
-          <input
-            id="showDueDate"
-            type="checkbox"
-            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-            checked={showDueDate}
-            onChange={() => setShowDueDate(!showDueDate)}
-          />
-          <label
-            htmlFor="showDueDate"
-            className="w-full py-3 ms-2 text-sm font-medium text-gray-900 dark:text-gray-300"
-          >
-            Due Date
-          </label>
-        </div>
-      </li>
-      <li className="w-full border-b border-gray-200 sm:border-b-0 sm:border-r dark:border-gray-600">
-        <div className="flex items-center ps-3">
-          <input
-            id="showReminderTime"
-            type="checkbox"
-            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-            checked={showReminderTime}
-            onChange={() => setShowReminderTime(!showReminderTime)}
-          />
-          <label
-            htmlFor="showReminderTime"
-            className="w-full py-3 ms-2 text-sm font-medium text-gray-900 dark:text-gray-300"
-          >
-            Reminder Time
-          </label>
-        </div>
-      </li>
-      <li className="w-full dark:border-gray-600">
-        <div className="flex items-center ps-3">
-          <input
-            id="showReminderDays"
-            type="checkbox"
-            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
-            checked={showReminderDays}
-            onChange={() => setShowReminderDays(!showReminderDays)}
-          />
-          <label
-            htmlFor="showReminderDays"
-            className="w-full py-3 ms-2 text-sm font-medium text-gray-900 dark:text-gray-300"
-          >
-            Reminder Days
-          </label>
-        </div>
-      </li>
-    </ul>
-</div>
+            <ul className="items-center w-full text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-lg sm:flex dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+              <li className="w-full border-b border-gray-200 sm:border-b-0 sm:border-r dark:border-gray-600">
+                <div className="flex items-center ps-3">
+                  <input
+                    id="showDueDate"
+                    type="checkbox"
+                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
+                    checked={showDueDate}
+                    onChange={() => setShowDueDate(!showDueDate)}
+                  />
+                  <label
+                    htmlFor="showDueDate"
+                    className="w-full py-3 ms-2 text-sm font-medium text-gray-900 dark:text-gray-300"
+                  >
+                    Due Date
+                  </label>
+                </div>
+              </li>
+              <li className="w-full border-b border-gray-200 sm:border-b-0 sm:border-r dark:border-gray-600">
+                <div className="flex items-center ps-3">
+                  <input
+                    id="showReminderTime"
+                    type="checkbox"
+                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
+                    checked={showReminderTime}
+                    onChange={() => setShowReminderTime(!showReminderTime)}
+                  />
+                  <label
+                    htmlFor="showReminderTime"
+                    className="w-full py-3 ms-2 text-sm font-medium text-gray-900 dark:text-gray-300"
+                  >
+                    Reminder Time
+                  </label>
+                </div>
+              </li>
+              <li className="w-full dark:border-gray-600">
+                <div className="flex items-center ps-3">
+                  <input
+                    id="showReminderDays"
+                    type="checkbox"
+                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-700 dark:focus:ring-offset-gray-700 focus:ring-2 dark:bg-gray-600 dark:border-gray-500"
+                    checked={showReminderDays}
+                    onChange={() => setShowReminderDays(!showReminderDays)}
+                  />
+                  <label
+                    htmlFor="showReminderDays"
+                    className="w-full py-3 ms-2 text-sm font-medium text-gray-900 dark:text-gray-300"
+                  >
+                    Reminder Days
+                  </label>
+                </div>
+              </li>
+            </ul>
+          </div>
 
           <div className="flex justify-center">
             <button
@@ -363,3 +362,57 @@ export const Model = ({
     </div>
   );
 };
+
+export const SyncAcc = ({
+  isOpen,
+  onClose,
+  title,
+}) => {
+  // State for the form inputs
+  if (!isOpen) return null;
+
+  return (
+      <div className="fixed top-0 left-0 w-full h-full flex items-center justify-center bg-gray-500 bg-opacity-50">
+          <div className="relative bg-slate-200 max-w-lg w-full rounded-lg p-3 sm:p-5 flex flex-col justify-start dark:bg-slate-900">
+              <button
+                  aria-label="close alert"
+                  className="absolute top-3 right-3 sm:right-4"
+                  onClick={onClose}
+              >
+                  <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth="1.5"
+                      stroke="currentColor"
+                      className="w-6 h-6"
+                  >
+                      <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M6 18L18 6M6 6l12 12"
+                      ></path>
+                  </svg>
+              </button>
+              <h2 className="font-medium mb-5 text-lg md:text-2xl">{title}</h2>
+              <div className="flex justify-between items-center mb-5">
+                  <button className="btn px-2 text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700 flex items-center"
+                      id="google">
+                      <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="30" height="30" viewBox="0 0 48 48">
+                          <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path>
+                      </svg>
+                      <a href="http://localhost:3000/googlelogin">Sync with Google</a>
+                  </button>
+                  <div>OR</div>
+                  <button className="btn px-2 text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700 flex items-center"
+                      id="microsoft">
+                      <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="30" height="30" viewBox="0 0 48 48">
+                          <path fill="#ff5722" d="M6 6H22V22H6z" transform="rotate(-180 14 14)"></path><path fill="#4caf50" d="M26 6H42V22H26z" transform="rotate(-180 34 14)"></path><path fill="#ffc107" d="M26 26H42V42H26z" transform="rotate(-180 34 34)"></path><path fill="#03a9f4" d="M6 26H22V42H6z" transform="rotate(-180 14 34)"></path>
+                      </svg>
+                      <a href="http://localhost:3000/microsoftlogin">Sync with Microsoft</a>
+                  </button>
+              </div>
+          </div>
+      </div>
+  );
+}; 
