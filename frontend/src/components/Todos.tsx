@@ -195,8 +195,57 @@ export const Todos = () => {
     }
   };
 
+  const handleLoginResponse = () => {
+    const params = new URLSearchParams(window.location.search);
+    const loginStatus = params.get('login');
+
+    if (loginStatus === 'success') {
+      toast.success("Login successful", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: true,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+      })
+    } else if (loginStatus === 'alreadyloggedin') {
+      toast.info("You are already logged in", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: true,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+      });
+    } else if (loginStatus === 'failed') {
+      toast.error("Login failed", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: true,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+      });
+    }
+
+    // this remove the loginstatus parameter from the url
+    if (loginStatus) {
+      setTimeout(() => {
+        const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+        window.history.replaceState({ path: newUrl }, '', newUrl);
+      }, 500); // Adjust the delay as needed
+    }
+  };
+
   useEffect(() => {
     fetchTodos();
+    handleLoginResponse();
   }, []);
 
   const handleSignOut = async () => {
