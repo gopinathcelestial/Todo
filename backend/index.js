@@ -58,29 +58,55 @@ app.use('/api/v1', require('./routes/todoRoutes'));
 
 // Google Calendar Routes
 app.get('/googlelogin', (req, res) => {
-    const url = googleOAuth2Client.generateAuthUrl({
-        access_type: 'offline',
-        scope: 'https://www.googleapis.com/auth/calendar.readonly'
-    });
+  const url = googleOAuth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: ['https://www.googleapis.com/auth/calendar.readonly',
+      'https://www.googleapis.com/auth/userinfo.profile',
+      'https://www.googleapis.com/auth/userinfo.email',
+      'openid'],
+  });
     res.redirect(url);
 });
 
-app.get('/redirect', (req, res) => {
-    const code = req.query.code;
-    googleOAuth2Client.getToken(code, (err, tokens) => {
-        if (err) {
-            console.error('Couldn\'t get token', err);
-            res.send('Error');
-            return;
-        }
-        googleOAuth2Client.setCredentials(tokens);
-        if (!req.session.googleTokens) {
-            req.session.googleTokens = [];
-        }
-        req.session.googleTokens.push(tokens);
-        req.session.activeGoogleToken = tokens;
-        res.redirect('http://localhost:5173/');
+app.get('/redirect', async (req, res) => {
+  const code = req.query.code;
+
+  try {
+    const { tokens } = await googleOAuth2Client.getToken(code);
+    googleOAuth2Client.setCredentials(tokens);
+
+    // Fetch user info using the Google API client
+    const oauth2 = google.oauth2({
+      auth: googleOAuth2Client,
+      version: 'v2'
     });
+
+    const userInfo = await oauth2.userinfo.get();
+    const email = userInfo.data.email;
+
+    if (!email) {
+      console.error('Could not extract email from user info');
+      res.send('Error extracting email');
+      return;
+    }
+
+    // Assuming req.session.googleTokens is an array of token objects
+    req.session.googleTokens = req.session.googleTokens || [];
+
+    const tokenExists = req.session.googleTokens.some(token => token.email === email);
+
+    if (!tokenExists) {
+      req.session.googleTokens.push({ ...tokens, email });
+      res.redirect('http://localhost:5173/?login=success');
+    }else{
+      res.redirect('http://localhost:5173/?login=alreadyloggedin');
+    }
+
+  } catch (error) {
+    console.error('Error during Google OAuth flow:', error);
+    res.send('Error');
+    res.redirect('http://localhost:5173/?login=failed');
+  }
 });
 
 app.get('/calendars', async (req, res) => {
@@ -118,9 +144,9 @@ app.get('/events', async (req, res) => {
           const calendarResponse = await calendar.calendarList.list();
           const calendars = calendarResponse.data.items;
 
-          for (const cal of calendars) {
+          // for (const cal of calendars) {
               const eventsResponse = await calendar.events.list({
-                  calendarId: cal.id,
+                  calendarId: 'primary',
                   timeMin: (new Date()).toISOString(),
                   maxResults: 15,
                   singleEvents: true,
@@ -137,7 +163,7 @@ app.get('/events', async (req, res) => {
                   origin: 'google'
               }));
               allEvents.push(...transformedEvents);
-          }
+          // }
       } catch (err) {
           console.error('Error fetching Google events', err);
       }
@@ -157,8 +183,8 @@ app.get('/events', async (req, res) => {
           const calendarResponse = await client.api('/me/calendars').get();
           const calendars = calendarResponse.value;
 
-          for (const calendar of calendars) {
-              const calendarId = calendar.id;
+          // for (const calendar of calendars) {
+              const calendarId = calendars[0].id;
               const eventsResponse = await client.api(`/me/calendars/${calendarId}/events`).get();
               const events = eventsResponse.value;
 
@@ -171,7 +197,7 @@ app.get('/events', async (req, res) => {
                   origin: 'microsoft'
               }));
               allEvents.push(...transformedEvents);
-          }
+          // }
       } catch (error) {
           console.error('Error fetching Microsoft events', error);
       }
@@ -210,34 +236,67 @@ app.get('/microsoftlogin', (req, res) => {
 });
 
 app.get('/microsoft/redirect', async (req, res) => {
-    const { code } = req.query;
+  const code = req.query.code;
+
+  try {
+    const tokenResponse = await getMicrosoftToken(code);
+    const accessToken = tokenResponse.access_token;
+    const userInfo = await getMicrosoftUserInfo(accessToken);
+    const email = userInfo.mail || userInfo.userPrincipalName;
+
+    req.session.microsoftTokens = req.session.microsoftTokens || [];
+
+    const tokenExists = req.session.microsoftTokens.some(token => token.email === email);
+
+    if (!tokenExists) {
+      req.session.microsoftTokens.push({ ...tokenResponse, email });
+      res.redirect('http://localhost:5173?login=success');
+    } else {
+      res.redirect('http://localhost:5173?login=alreadyloggedin');
+    }
+
+  } catch (err) {
+    res.redirect('http://localhost:5173?login=failed');
+    console.error('Error during Microsoft OAuth flow', err);
+    res.send('Error');
+  }
+
+  async function getMicrosoftToken(code) {
     const tokenParams = new URLSearchParams({
-        client_id: process.env.MICROSOFT_CLIENT_ID,
-        client_secret: process.env.MICROSOFT_SECRET_VALUE,
-        code,
-        redirect_uri: process.env.MICROSOFT_REDIRECT,
-        grant_type: 'authorization_code',
-    });
+      client_id: process.env.MICROSOFT_CLIENT_ID,
+      client_secret: process.env.MICROSOFT_SECRET_VALUE,
+      code,
+      redirect_uri: process.env.MICROSOFT_REDIRECT,
+      grant_type: 'authorization_code',
+  });
 
     try {
-        const response = await axios.post('https://login.microsoftonline.com/common/oauth2/v2.0/token', tokenParams, {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        });
-        const accessToken = response.data;
+      const response = await axios.post('https://login.microsoftonline.com/common/oauth2/v2.0/token', tokenParams, {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    });
 
-        if (!req.session.microsoftTokens) {
-            req.session.microsoftTokens = [];
-        }
-        req.session.microsoftTokens.push(accessToken);
-        req.session.activeMicrosoftToken = accessToken;
-        res.redirect('http://localhost:5173/');
+      return response.data;
     } catch (error) {
-        console.error('Access Token Error:', error.message);
-        if (error.response) {
-            console.error('Error response data:', error.response.data);
-        }
-        res.send('Error logging in with Microsoft');
+      console.error('Error fetching Microsoft token:', error.response ? error.response.data : error.message);
+      throw error;
     }
+  }
+
+  async function getMicrosoftUserInfo(accessToken) {
+    try {
+      const response = await axios.get('https://graph.microsoft.com/v1.0/me', {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching Microsoft user info:', error.response ? error.response.data : error.message);
+      throw error;
+    }
+  }
+
 });
 
 app.get('/microsoft/calendars', async (req, res) => {
