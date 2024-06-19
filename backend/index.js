@@ -144,6 +144,7 @@ app.get('/events', async (req, res) => {
           const calendarResponse = await calendar.calendarList.list();
           const calendars = calendarResponse.data.items;
 
+          // By uncommenting  the for loop we can access all events and default calendars.
           // for (const cal of calendars) {
               const eventsResponse = await calendar.events.list({
                   calendarId: 'primary',
@@ -160,6 +161,7 @@ app.get('/events', async (req, res) => {
                   title: event.summary,
                   description: event.description,
                   dueDate: event.end.dateTime,
+                  createdAt: event.created,
                   origin: 'google'
               }));
               allEvents.push(...transformedEvents);
@@ -183,6 +185,7 @@ app.get('/events', async (req, res) => {
           const calendarResponse = await client.api('/me/calendars').get();
           const calendars = calendarResponse.value;
 
+          // By uncommenting  the for loop we can access all events and default calendars.
           // for (const calendar of calendars) {
               const calendarId = calendars[0].id;
               const eventsResponse = await client.api(`/me/calendars/${calendarId}/events`).get();
@@ -194,6 +197,7 @@ app.get('/events', async (req, res) => {
                   title: event.subject,
                   description: event.bodyPreview,
                   dueDate: event.end.dateTime,
+                  createdAt: event.createdDateTime,
                   origin: 'microsoft'
               }));
               allEvents.push(...transformedEvents);
