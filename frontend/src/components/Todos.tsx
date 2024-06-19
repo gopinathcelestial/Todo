@@ -37,7 +37,7 @@ export const Todos = () => {
   const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
   const [filteredTodos, setFilteredTodos] = useState<Todo[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortOrder, setSortOrder] = useState("asc");
+  const [sortOrder, setSortOrder] = useState("newest");
   const navigate = useNavigate();
   const googleIcon = <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="30" height="30" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path></svg>
   const microsoftIcon = <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="30" height="30" viewBox="0 0 48 48"><path fill="#ff5722" d="M6 6H22V22H6z" transform="rotate(-180 14 14)"></path><path fill="#4caf50" d="M26 6H42V22H26z" transform="rotate(-180 34 14)"></path><path fill="#ffc107" d="M26 26H42V42H26z" transform="rotate(-180 34 34)"></path><path fill="#03a9f4" d="M6 26H22V42H6z" transform="rotate(-180 14 34)"></path></svg>
@@ -374,7 +374,7 @@ export const Todos = () => {
   const handleAllTasksClick = () => {
     setShowCalendar(false);
     settitle("All Tasks");
-    const sortedTodos = sortTodos(todos);
+    const sortedTodos = sortTodos(todos,'newest');
     setFilteredTodos(sortedTodos);
   };
   const handleCompletedTasksClick = () => {
@@ -397,26 +397,31 @@ export const Todos = () => {
     settitle("Calendar View");
   };
 
-  const toggleSortOrder = () => {
-    const newSortOrder = sortOrder === "asc" ? "desc" : "asc";
+  const handleSortOrderChange = (event:any) => {
+    const newSortOrder = event.target.value;
     setSortOrder(newSortOrder);
-    const sortedTodos = sortTodos(todos);
+    const sortedTodos = sortTodos(todos, newSortOrder);
     setFilteredTodos(sortedTodos);
   };
 
-  const sortTodos = (todos: any) => {
-    return todos.sort((a: any, b: any) => {
-      const titleA = a.title.toLowerCase();
-      const titleB = b.title.toLowerCase();
-
-      if (sortOrder === "asc") {
-        if (titleA < titleB) return -1;
-        if (titleA > titleB) return 1;
-        return 0;
-      } else {
-        if (titleA < titleB) return 1;
-        if (titleA > titleB) return -1;
-        return 0;
+  const sortTodos = (todos:any, newSort:string) => {
+    return todos.sort((a:any, b:any) => {
+      if (newSort === 'asc' || newSort === 'desc') {
+        const titleA = a.title.toLowerCase();
+        const titleB = b.title.toLowerCase();
+        if (newSort === 'asc') {
+          if (titleA < titleB) return -1;
+          if (titleA > titleB) return 1;
+          return 0;
+        } else {
+          if (titleA < titleB) return 1;
+          if (titleA > titleB) return -1;
+          return 0;
+        }
+      } else if (newSort === 'newest') {
+        const createdA = new Date(a.createdAt);
+        const createdB = new Date(b.createdAt)
+        return createdB - createdA;
       }
     });
   };
@@ -505,6 +510,8 @@ export const Todos = () => {
   return (
     <>
       <nav className="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700 flex items-center justify-between px-3 py-3 lg:px-5">
+        <svg  width="30" height="30" viewBox="0 0 1024 1024"  version="1.1" xmlns="http://www.w3.org/2000/svg" fill="#000000"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M861.588238 240.133873v-65.792823c0-36.191275-29.439775-65.631049-65.631049-65.63105h-21.877358c-36.191275 0-65.631049 29.439775-65.631049 65.63105v65.631049H314.659414v-65.631049c0-36.191275-29.439775-65.631049-65.631049-65.63105h-21.877358c-36.191275 0-65.631049 29.439775-65.631049 65.63105v65.792823c-36.317212 0.868255-65.631049 30.539428-65.63105 67.061417v543.745565c0 37.06772 30.155471 67.223191 67.223191 67.223191h696.886045c37.06772 0 67.223191-30.155471 67.223191-67.223191V307.19529c-0.001024-36.52199-29.315885-66.193162-65.633097-67.061417z m-109.385765-65.792823c0-12.060345 9.817012-21.877358 21.877358-21.877358h21.877358c12.060345 0 21.877358 9.817012 21.877358 21.877358v175.016814c0 12.060345-9.817012 21.877358-21.877358 21.877358h-21.877358c-12.060345 0-21.877358-9.817012-21.877358-21.877358V174.34105z m-546.928824 0c0-12.060345 9.817012-21.877358 21.877358-21.877358h21.877358c12.060345 0 21.877358 9.817012 21.877358 21.877358v175.016814c0 12.060345-9.817012 21.877358-21.877358 21.877358h-21.877358c-12.060345 0-21.877358-9.817012-21.877358-21.877358V174.34105z m678.191947 676.600829c0 12.935767-10.532708 23.468476-23.468476 23.468475H163.111076c-12.935767 0-23.468476-10.532708-23.468476-23.468475V307.19529c0-12.402323 9.677764-22.593054 21.877358-23.415233v65.577807c0 36.191275 29.439775 65.631049 65.631049 65.631049h21.877358c36.191275 0 65.631049-29.439775 65.631049-65.631049v-65.631049h393.789368v65.631049c0 36.191275 29.439775 65.631049 65.631049 65.631049h21.877358c36.191275 0 65.631049-29.439775 65.631049-65.631049v-65.577807c12.19857 0.82218 21.877358 11.012911 21.877358 23.415233v543.746589z" fill="#869da2"></path><path d="M706.719439 478.272194l-48.01715-44.741741-182.28128 195.621482-111.468348-122.615387-48.563905 44.148911 159.469116 172.685427z" fill="#b6d8dd"></path></g></svg>
+        <span className="ms-3 whitespace-nowrap"></span>
         <a
           href="/"
           className="text-xl font-semibold sm:text-2xl whitespace-nowrap dark:text-white"
@@ -552,14 +559,14 @@ export const Todos = () => {
         className="fixed top-0 left-0 z-40 w-64 h-screen pt-20 transition-transform -translate-x-full bg-white border-r border-gray-200 sm:translate-x-0 dark:bg-gray-800 dark:border-gray-700"
         aria-label="Sidebar"
       >
-        <div className="h-auto px-3 pb-4 overflow-y-auto bg-white dark:bg-gray-800">
+        <div className="h-[450pt] px-3 pb-4 overflow-y-auto bg-white dark:bg-gray-800">
           <ul className="space-y-2 font-medium">
             <li>
               <a
                 href="#"
                 className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
               >
-                <svg fill="#000000" width="30" height="30" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M2,11H8a1,1,0,0,0,1-1V4A1,1,0,0,0,8,3H2A1,1,0,0,0,1,4v6A1,1,0,0,0,2,11ZM3,5H7V9H3ZM23,7a1,1,0,0,1-1,1H12a1,1,0,0,1,0-2H22A1,1,0,0,1,23,7Zm0,10a1,1,0,0,1-1,1H12a1,1,0,0,1,0-2H22A1,1,0,0,1,23,17ZM3.235,19.7,1.281,17.673a1,1,0,0,1,1.438-1.391l1.252,1.3L7.3,14.289A1,1,0,1,1,8.7,15.711l-4.046,4a1,1,0,0,1-.7.289H3.942A1,1,0,0,1,3.235,19.7Z" /></svg>
+                <svg fill="#929292" width="25" height="25" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="#929292"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M2,11H8a1,1,0,0,0,1-1V4A1,1,0,0,0,8,3H2A1,1,0,0,0,1,4v6A1,1,0,0,0,2,11ZM3,5H7V9H3ZM23,7a1,1,0,0,1-1,1H12a1,1,0,0,1,0-2H22A1,1,0,0,1,23,7Zm0,10a1,1,0,0,1-1,1H12a1,1,0,0,1,0-2H22A1,1,0,0,1,23,17ZM3.235,19.7,1.281,17.673a1,1,0,0,1,1.438-1.391l1.252,1.3L7.3,14.289A1,1,0,1,1,8.7,15.711l-4.046,4a1,1,0,0,1-.7.289H3.942A1,1,0,0,1,3.235,19.7Z"></path></g></svg>
                 <span
                   className="flex-1 ms-3 whitespace-nowrap"
                   onClick={handleAllTasksClick}
@@ -575,11 +582,8 @@ export const Todos = () => {
             <li>
               <a
                 href="#"
-                className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
-              >
-                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M3 9H21M7 3V5M17 3V5M6 13H8M6 17H8M11 13H13M11 17H13M16 13H18M16 17H18M6.2 21H17.8C18.9201 21 19.4802 21 19.908 20.782C20.2843 20.5903 20.5903 20.2843 20.782 19.908C21 19.4802 21 18.9201 21 17.8V8.2C21 7.07989 21 6.51984 20.782 6.09202C20.5903 5.71569 20.2843 5.40973 19.908 5.21799C19.4802 5 18.9201 5 17.8 5H6.2C5.0799 5 4.51984 5 4.09202 5.21799C3.71569 5.40973 3.40973 5.71569 3.21799 6.09202C3 6.51984 3 7.07989 3 8.2V17.8C3 18.9201 3 19.4802 3.21799 19.908C3.40973 20.2843 3.71569 20.5903 4.09202 20.782C4.51984 21 5.07989 21 6.2 21Z" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
+                className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
+                <svg width="25" height="25" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#929292"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M3 9H21M7 3V5M17 3V5M6 12H8M11 12H13M16 12H18M6 15H8M11 15H13M16 15H18M6 18H8M11 18H13M16 18H18M6.2 21H17.8C18.9201 21 19.4802 21 19.908 20.782C20.2843 20.5903 20.5903 20.2843 20.782 19.908C21 19.4802 21 18.9201 21 17.8V8.2C21 7.07989 21 6.51984 20.782 6.09202C20.5903 5.71569 20.2843 5.40973 19.908 5.21799C19.4802 5 18.9201 5 17.8 5H6.2C5.0799 5 4.51984 5 4.09202 5.21799C3.71569 5.40973 3.40973 5.71569 3.21799 6.09202C3 6.51984 3 7.07989 3 8.2V17.8C3 18.9201 3 19.4802 3.21799 19.908C3.40973 20.2843 3.71569 20.5903 4.09202 20.782C4.51984 21 5.07989 21 6.2 21Z" stroke="#929292" strokeWidth="2" strokeLinecap="round"></path> </g></svg>
                 <span
                   className="flex-1 ms-3 whitespace-nowrap"
                   onClick={handleCalendarViewClick}
@@ -597,6 +601,7 @@ export const Todos = () => {
                 href="#"
                 className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
               >
+                <svg width="25" height="25" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#929292"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M18.5249 9.46C18.8317 10.2474 19 11.1041 19 12C19 15.866 15.866 19 12 19H9M5.47507 14.54C5.16832 13.7526 5 12.8959 5 12C5 8.13401 8.13401 5 12 5H15M15 5L12 2M15 5L12 8M9 19L12 16M9 19L12 22" stroke="#929292" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path> </g></svg>
                 <span
                   className="flex-1 ms-3 whitespace-nowrap"
                   onClick={() => {
@@ -660,82 +665,13 @@ export const Todos = () => {
                       : completedTasksCount}
                     )
                   </h1>
-                  <button
-                    className="ml-2 transition hover:text-slate-700 dark:hover:text-slate-200 pr-10"
-                    onClick={toggleSortOrder}
-                  >
-                    {sortOrder !== "asc" ? (
-                      <svg
-                        fill="#000000"
-                        className="h-13"
-                        width="3rem"
-                        version="1.1"
-                        id="Capa_1"
-                        xmlns="http://www.w3.org/2000/svg"
-                        xmlnsXlink="http://www.w3.org/1999/xlink"
-                        viewBox="0 0 413.156 413.156"
-                        xmlSpace="preserve"
-                      >
-                        <g>
-                          <path
-                            d="M97.113,127.848c-1.251-2.594-3.877-4.243-6.756-4.243c-0.005,0-0.011,0-0.016,0l-9.018,0.019
-                            c-2.885,0.006-5.512,1.666-6.754,4.271L0.731,282.682c-1.108,2.324-0.947,5.054,0.427,7.231c1.373,2.177,3.769,3.498,6.343,3.498
-                            h11.08c2.891,0,5.524-1.662,6.769-4.271l19.321-40.504h82.928l19.544,40.533c1.251,2.594,3.876,4.243,6.756,4.243H165
-                            c0.008,0,0.015,0,0.019,0c4.143,0,7.5-3.358,7.5-7.5c0-1.359-0.361-2.634-0.993-3.734L97.113,127.848z M56.599,223.636
-                            l29.314-61.453l29.631,61.453H56.599z"
-                          />
-                          <path
-                            d="M412.37,131.916l-3.99-8.014c-1.269-2.547-3.868-4.157-6.714-4.157H289.719c-4.143,0-7.5,3.358-7.5,7.5v10
-                            c0,4.142,3.357,7.5,7.5,7.5h86.968l-95.702,128.506c-1.689,2.267-1.958,5.292-0.698,7.822l3.99,8.015
-                            c1.269,2.547,3.868,4.157,6.714,4.157h111.318c4.142,0,7.5-3.358,7.5-7.5v-10c0-4.142-3.358-7.5-7.5-7.5H315.97l95.702-128.507
-                            C413.36,137.471,413.63,134.447,412.37,131.916z"
-                          />
-                          <path
-                            d="M271.818,222.604l-7.873-6.165c-1.564-1.226-3.55-1.78-5.53-1.54c-1.975,0.241-3.772,1.255-4.999,2.822l-18.231,23.285
-                            v-113.76c0-4.142-3.357-7.5-7.5-7.5h-10c-4.143,0-7.5,3.358-7.5,7.5v113.76l-18.232-23.285c-1.227-1.566-3.024-2.581-4.999-2.822
-                            c-1.981-0.241-3.965,0.314-5.53,1.54l-7.873,6.165c-3.261,2.553-3.835,7.267-1.281,10.528l44.51,56.847
-                            c1.422,1.816,3.6,2.876,5.905,2.876c2.306,0,4.483-1.061,5.905-2.876l44.51-56.847
-                            C275.652,229.871,275.078,225.157,271.818,222.604z"
-                          />
-                        </g>
-                      </svg>
-                    ) : (
-                      <svg
-                        fill="#000000"
-                        className="h-13"
-                        width="3rem"
-                        version="1.1"
-                        id="Capa_1"
-                        xmlns="http://www.w3.org/2000/svg"
-                        xmlnsXlink="http://www.w3.org/1999/xlink"
-                        viewBox="0 0 420.046 420.046"
-                        xmlSpace="preserve"
-                      >
-                        <g>
-                          <path
-                            d="M344.64,131.293c-1.252-2.594-3.877-4.243-6.756-4.243c-0.006,0-0.012,0-0.016,0l-9.018,0.019
-                            c-2.885,0.006-5.512,1.666-6.754,4.271l-73.84,154.787c-1.109,2.324-0.947,5.054,0.426,7.231c1.373,2.177,3.77,3.498,6.344,3.498
-                            h11.08c2.891,0,5.523-1.662,6.77-4.271l19.32-40.504h82.928l19.545,40.533c1.25,2.594,3.875,4.243,6.756,4.243h11.102
-                            c0.008,0,0.014,0,0.02,0c4.143,0,7.5-3.358,7.5-7.5c0-1.359-0.361-2.634-0.994-3.734L344.64,131.293z M304.124,227.081
-                            l29.314-61.453l29.631,61.453H304.124z"
-                          />
-                          <path
-                            d="M132.87,135.361l-3.99-8.014c-1.27-2.547-3.869-4.157-6.715-4.157H10.218c-4.143,0-7.5,3.358-7.5,7.5v10
-                            c0,4.142,3.357,7.5,7.5,7.5h86.969L1.484,276.696c-1.688,2.267-1.957,5.292-0.697,7.822l3.99,8.015
-                            c1.268,2.547,3.867,4.157,6.713,4.157h111.318c4.143,0,7.5-3.358,7.5-7.5v-10c0-4.142-3.357-7.5-7.5-7.5H36.47l95.701-128.507
-                            C133.861,140.916,134.13,137.892,132.87,135.361z"
-                          />
-                          <path
-                            d="M244.65,226.049l-7.873-6.165c-1.564-1.226-3.549-1.78-5.529-1.54c-1.975,0.241-3.773,1.255-5,2.822l-18.23,23.285V130.69
-                            c0-4.142-3.357-7.5-7.5-7.5h-10c-4.143,0-7.5,3.358-7.5,7.5v113.76l-18.232-23.285c-1.227-1.566-3.023-2.581-4.998-2.822
-                            c-1.982-0.241-3.965,0.314-5.531,1.54l-7.873,6.165c-3.26,2.553-3.834,7.267-1.281,10.528l44.51,56.847
-                            c1.422,1.816,3.6,2.876,5.906,2.876c2.305,0,4.482-1.06,5.904-2.876l44.51-56.847C248.486,233.316,247.911,228.602,244.65,226.049z
-                            "
-                          />
-                        </g>
-                      </svg>
-                    )}
-                  </button>
+                  <div>
+                    <select onChange={handleSortOrderChange} value={sortOrder}>
+                      <option value="newest">Sort by Newest</option>
+                      <option value="asc">Sort by Ascending</option>
+                      <option value="desc">Sort by Descending</option>
+                    </select>
+                  </div>
                 </div>
                 <ul className="tasksList mt-4 grid gap-2 sm:gap-4 xl:gap-6 2xl:grid-cols-4 xl:grid-cols-3 lg:grid-cols-4 md:grid-cols-3 grid-cols-2 items-end">
                   <li>

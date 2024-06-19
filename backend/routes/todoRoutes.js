@@ -16,6 +16,7 @@ router.get('/todos', verifyToken, async (req, res) => {
 router.post('/todos', verifyToken, async (req, res) => {
     try {
         const userEmail = req.user.email;
+        const createdAt = new Date();
         console.log(req.body)
         const { title, description, isCompleted, dueDate, reminderTime, reminderDays } = req.body;
         const todo = new Todo({
@@ -26,7 +27,8 @@ router.post('/todos', verifyToken, async (req, res) => {
             dueDate,
             reminderTime,
             reminderDays,
-            userEmail
+            userEmail,
+            createdAt,
         });
         const savedTodo = await todo.save();
         res.status(201).json(savedTodo);
