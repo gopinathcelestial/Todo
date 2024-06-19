@@ -8,7 +8,8 @@ const todoSchema = new mongoose.Schema({
     dueDate: Date,
     reminderTime: String, 
     reminderDays: [String],
-    userEmail: String
+    userEmail: String,
+    createdAt: Date,
 }, {
     collection: 'todo'
 });

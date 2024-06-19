@@ -37,7 +37,7 @@ export const Todos = () => {
   const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
   const [filteredTodos, setFilteredTodos] = useState<Todo[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortOrder, setSortOrder] = useState("asc");
+  const [sortOrder, setSortOrder] = useState("newest");
   const [filterToday, setFilterToday] = useState(false);
   const [filterCompleted, setFilterCompleted] = useState(false);
   const [filterInCompleted, setFilterInCompleted] = useState(false);
@@ -449,7 +449,7 @@ export const Todos = () => {
   const handleAllTasksClick = () => {
     setShowCalendar(false);
     settitle("All Tasks");
-    const sortedTodos = sortTodos(todos);
+    const sortedTodos = sortTodos(todos,'newest');
     setFilteredTodos(sortedTodos);
   };
   const handleCompletedTasksClick = () => {
@@ -472,26 +472,31 @@ export const Todos = () => {
     settitle("Calendar View");
   };
 
-  const toggleSortOrder = () => {
-    const newSortOrder = sortOrder === "asc" ? "desc" : "asc";
+  const handleSortOrderChange = (event:any) => {
+    const newSortOrder = event.target.value;
     setSortOrder(newSortOrder);
-    const sortedTodos = sortTodos(todos);
+    const sortedTodos = sortTodos(todos, newSortOrder);
     setFilteredTodos(sortedTodos);
   };
 
-  const sortTodos = (todos: any) => {
-    return todos.sort((a: any, b: any) => {
-      const titleA = a.title.toLowerCase();
-      const titleB = b.title.toLowerCase();
-
-      if (sortOrder === "asc") {
-        if (titleA < titleB) return -1;
-        if (titleA > titleB) return 1;
-        return 0;
-      } else {
-        if (titleA < titleB) return 1;
-        if (titleA > titleB) return -1;
-        return 0;
+  const sortTodos = (todos:any, newSort:string) => {
+    return todos.sort((a:any, b:any) => {
+      if (newSort === 'asc' || newSort === 'desc') {
+        const titleA = a.title.toLowerCase();
+        const titleB = b.title.toLowerCase();
+        if (newSort === 'asc') {
+          if (titleA < titleB) return -1;
+          if (titleA > titleB) return 1;
+          return 0;
+        } else {
+          if (titleA < titleB) return 1;
+          if (titleA > titleB) return -1;
+          return 0;
+        }
+      } else if (newSort === 'newest') {
+        const createdA = new Date(a.createdAt);
+        const createdB = new Date(b.createdAt)
+        return createdB - createdA;
       }
     });
   };
@@ -588,6 +593,8 @@ export const Todos = () => {
   return (
     <>
       <nav className="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700 flex items-center justify-between px-3 py-3 lg:px-5">
+        <svg  width="30" height="30" viewBox="0 0 1024 1024"  version="1.1" xmlns="http://www.w3.org/2000/svg" fill="#000000"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M861.588238 240.133873v-65.792823c0-36.191275-29.439775-65.631049-65.631049-65.63105h-21.877358c-36.191275 0-65.631049 29.439775-65.631049 65.63105v65.631049H314.659414v-65.631049c0-36.191275-29.439775-65.631049-65.631049-65.63105h-21.877358c-36.191275 0-65.631049 29.439775-65.631049 65.63105v65.792823c-36.317212 0.868255-65.631049 30.539428-65.63105 67.061417v543.745565c0 37.06772 30.155471 67.223191 67.223191 67.223191h696.886045c37.06772 0 67.223191-30.155471 67.223191-67.223191V307.19529c-0.001024-36.52199-29.315885-66.193162-65.633097-67.061417z m-109.385765-65.792823c0-12.060345 9.817012-21.877358 21.877358-21.877358h21.877358c12.060345 0 21.877358 9.817012 21.877358 21.877358v175.016814c0 12.060345-9.817012 21.877358-21.877358 21.877358h-21.877358c-12.060345 0-21.877358-9.817012-21.877358-21.877358V174.34105z m-546.928824 0c0-12.060345 9.817012-21.877358 21.877358-21.877358h21.877358c12.060345 0 21.877358 9.817012 21.877358 21.877358v175.016814c0 12.060345-9.817012 21.877358-21.877358 21.877358h-21.877358c-12.060345 0-21.877358-9.817012-21.877358-21.877358V174.34105z m678.191947 676.600829c0 12.935767-10.532708 23.468476-23.468476 23.468475H163.111076c-12.935767 0-23.468476-10.532708-23.468476-23.468475V307.19529c0-12.402323 9.677764-22.593054 21.877358-23.415233v65.577807c0 36.191275 29.439775 65.631049 65.631049 65.631049h21.877358c36.191275 0 65.631049-29.439775 65.631049-65.631049v-65.631049h393.789368v65.631049c0 36.191275 29.439775 65.631049 65.631049 65.631049h21.877358c36.191275 0 65.631049-29.439775 65.631049-65.631049v-65.577807c12.19857 0.82218 21.877358 11.012911 21.877358 23.415233v543.746589z" fill="#869da2"></path><path d="M706.719439 478.272194l-48.01715-44.741741-182.28128 195.621482-111.468348-122.615387-48.563905 44.148911 159.469116 172.685427z" fill="#b6d8dd"></path></g></svg>
+        <span className="ms-3 whitespace-nowrap"></span>
         <a
           href="/"
           className="text-xl font-semibold sm:text-2xl whitespace-nowrap dark:text-white"
@@ -635,14 +642,14 @@ export const Todos = () => {
         className="fixed top-0 left-0 z-40 w-64 h-screen pt-20 transition-transform -translate-x-full bg-white border-r border-gray-200 sm:translate-x-0 dark:bg-gray-800 dark:border-gray-700"
         aria-label="Sidebar"
       >
-        <div className="h-auto px-3 pb-4 overflow-y-auto bg-white dark:bg-gray-800">
+        <div className="h-[450pt] px-3 pb-4 overflow-y-auto bg-white dark:bg-gray-800">
           <ul className="space-y-2 font-medium">
             <li>
               <a
                 href="#"
                 className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
               >
-                <svg fill="#000000" width="30" height="30" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M2,11H8a1,1,0,0,0,1-1V4A1,1,0,0,0,8,3H2A1,1,0,0,0,1,4v6A1,1,0,0,0,2,11ZM3,5H7V9H3ZM23,7a1,1,0,0,1-1,1H12a1,1,0,0,1,0-2H22A1,1,0,0,1,23,7Zm0,10a1,1,0,0,1-1,1H12a1,1,0,0,1,0-2H22A1,1,0,0,1,23,17ZM3.235,19.7,1.281,17.673a1,1,0,0,1,1.438-1.391l1.252,1.3L7.3,14.289A1,1,0,1,1,8.7,15.711l-4.046,4a1,1,0,0,1-.7.289H3.942A1,1,0,0,1,3.235,19.7Z" /></svg>
+                <svg fill="#929292" width="25" height="25" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke="#929292"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M2,11H8a1,1,0,0,0,1-1V4A1,1,0,0,0,8,3H2A1,1,0,0,0,1,4v6A1,1,0,0,0,2,11ZM3,5H7V9H3ZM23,7a1,1,0,0,1-1,1H12a1,1,0,0,1,0-2H22A1,1,0,0,1,23,7Zm0,10a1,1,0,0,1-1,1H12a1,1,0,0,1,0-2H22A1,1,0,0,1,23,17ZM3.235,19.7,1.281,17.673a1,1,0,0,1,1.438-1.391l1.252,1.3L7.3,14.289A1,1,0,1,1,8.7,15.711l-4.046,4a1,1,0,0,1-.7.289H3.942A1,1,0,0,1,3.235,19.7Z"></path></g></svg>
                 <span
                   className="flex-1 ms-3 whitespace-nowrap"
                   onClick={handleAllTasksClick}
@@ -658,11 +665,8 @@ export const Todos = () => {
             <li>
               <a
                 href="#"
-                className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
-              >
-                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M3 9H21M7 3V5M17 3V5M6 13H8M6 17H8M11 13H13M11 17H13M16 13H18M16 17H18M6.2 21H17.8C18.9201 21 19.4802 21 19.908 20.782C20.2843 20.5903 20.5903 20.2843 20.782 19.908C21 19.4802 21 18.9201 21 17.8V8.2C21 7.07989 21 6.51984 20.782 6.09202C20.5903 5.71569 20.2843 5.40973 19.908 5.21799C19.4802 5 18.9201 5 17.8 5H6.2C5.0799 5 4.51984 5 4.09202 5.21799C3.71569 5.40973 3.40973 5.71569 3.21799 6.09202C3 6.51984 3 7.07989 3 8.2V17.8C3 18.9201 3 19.4802 3.21799 19.908C3.40973 20.2843 3.71569 20.5903 4.09202 20.782C4.51984 21 5.07989 21 6.2 21Z" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
+                className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
+                <svg width="25" height="25" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#929292"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M3 9H21M7 3V5M17 3V5M6 12H8M11 12H13M16 12H18M6 15H8M11 15H13M16 15H18M6 18H8M11 18H13M16 18H18M6.2 21H17.8C18.9201 21 19.4802 21 19.908 20.782C20.2843 20.5903 20.5903 20.2843 20.782 19.908C21 19.4802 21 18.9201 21 17.8V8.2C21 7.07989 21 6.51984 20.782 6.09202C20.5903 5.71569 20.2843 5.40973 19.908 5.21799C19.4802 5 18.9201 5 17.8 5H6.2C5.0799 5 4.51984 5 4.09202 5.21799C3.71569 5.40973 3.40973 5.71569 3.21799 6.09202C3 6.51984 3 7.07989 3 8.2V17.8C3 18.9201 3 19.4802 3.21799 19.908C3.40973 20.2843 3.71569 20.5903 4.09202 20.782C4.51984 21 5.07989 21 6.2 21Z" stroke="#929292" strokeWidth="2" strokeLinecap="round"></path> </g></svg>
                 <span
                   className="flex-1 ms-3 whitespace-nowrap"
                   onClick={handleCalendarViewClick}
@@ -680,6 +684,7 @@ export const Todos = () => {
                 href="#"
                 className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
               >
+                <svg width="25" height="25" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#929292"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M18.5249 9.46C18.8317 10.2474 19 11.1041 19 12C19 15.866 15.866 19 12 19H9M5.47507 14.54C5.16832 13.7526 5 12.8959 5 12C5 8.13401 8.13401 5 12 5H15M15 5L12 2M15 5L12 8M9 19L12 16M9 19L12 22" stroke="#929292" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path> </g></svg>
                 <span
                   className="flex-1 ms-3 whitespace-nowrap"
                   onClick={() => {
@@ -893,6 +898,13 @@ export const Todos = () => {
                         </svg>
                       )}
                     </button>
+                  </div>
+                  <div>
+                    <select onChange={handleSortOrderChange} value={sortOrder}>
+                      <option value="newest">Sort by Newest</option>
+                      <option value="asc">Sort by Ascending</option>
+                      <option value="desc">Sort by Descending</option>
+                    </select>
                   </div>
                 </div>
                 <ul className="tasksList mt-4 grid gap-2 sm:gap-4 xl:gap-6 2xl:grid-cols-4 xl:grid-cols-3 lg:grid-cols-4 md:grid-cols-3 grid-cols-2 items-end">
