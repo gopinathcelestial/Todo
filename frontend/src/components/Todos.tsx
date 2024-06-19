@@ -141,7 +141,7 @@ export const Todos = () => {
 
   const applyFilters = async () => {
     const filteredTodos = await filterTodos();
-    setTodos(filteredTodos);  // This will replace the original todos, you may want to store original list in another state
+    setTodos(filteredTodos);  
   };
 
 
@@ -824,7 +824,7 @@ export const Todos = () => {
 
                     <button
                       className="ml-2 transition hover:text-slate-700 dark:hover:text-slate-200 pr-10"
-                      onClick={toggleSortOrder}
+                      onClick={handleSortOrderChange}
                     >
                       {sortOrder !== "asc" ? (
                         <svg
