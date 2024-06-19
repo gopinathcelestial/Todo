@@ -820,13 +820,13 @@ export const Todos = () => {
                         </button>
                       </div>
                     </div>
-                  </div>
                   <div>
                     <select onChange={handleSortOrderChange} value={sortOrder}>
                       <option value="newest">Sort by Newest</option>
                       <option value="asc">Sort by Ascending</option>
                       <option value="desc">Sort by Descending</option>
                     </select>
+                  </div>
                   </div>
                 </div>
                 <ul className="tasksList mt-4 grid gap-2 sm:gap-4 xl:gap-6 2xl:grid-cols-4 xl:grid-cols-3 lg:grid-cols-4 md:grid-cols-3 grid-cols-2 items-end">
