@@ -11,7 +11,7 @@ require('dotenv').config();
 const { google } = require('googleapis');
 const axios = require('axios');
 const crypto = require('crypto');
-
+const UserPhoto = require('./models/microsoftUserPhoto');
 const secretKey = crypto.randomBytes(32).toString('hex');
 const app = express();
 const port = process.env.PORT || 3000;
@@ -134,76 +134,132 @@ app.get('/events', async (req, res) => {
   const microsoftTokens = req.session.microsoftTokens || [];
 
   const allEvents = [];
+  const defaultImage = "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Windows_10_Default_Profile_Picture.svg/1200px-Windows_10_Default_Profile_Picture.svg.png";
+
+// Function to fetch and save Microsoft profile photo
+  const fetchAndSaveProfilePhoto = async (accessToken, email) => {
+      try {
+          // Fetch the profile photo from Microsoft Graph API
+          const profilePhotoResponse = await axios.get('https://graph.microsoft.com/v1.0/me/photo/$value', {
+              headers: {
+                  Authorization: `Bearer ${accessToken}`
+              },
+              responseType: 'arraybuffer'
+          });
+
+          const photoBuffer = Buffer.from(profilePhotoResponse.data, 'binary');
+          const photoContentType = profilePhotoResponse.headers['content-type'];
+
+          // Upsert the photo in the database (insert if not exists, otherwise update)
+          await UserPhoto.findOneAndUpdate(
+              { email },
+              { photo: photoBuffer, contentType: photoContentType },
+              { upsert: true }
+          );
+
+          // Return a base64-encoded data URL
+          const base64Photo = photoBuffer.toString('base64');
+          return `data:${photoContentType};base64,${base64Photo}`;
+
+      } catch (error) {
+          if (error.response && error.response.status === 404) {
+              // Profile photo not found, return default image URL
+              return defaultImage;
+          } else {
+              console.error('Error fetching or saving Microsoft profile photo:', error.response ? error.response.data : error.message);
+              throw error;
+          }
+      }
+  };
 
   // Fetch Google events
   for (const tokens of googleTokens) {
-      googleOAuth2Client.setCredentials(tokens);
-      const calendar = google.calendar({ version: 'v3', auth: googleOAuth2Client });
+    googleOAuth2Client.setCredentials(tokens);
+    const calendar = google.calendar({ version: 'v3', auth: googleOAuth2Client });
+    const oauth2 = google.oauth2({auth: googleOAuth2Client, version: 'v2'});
 
-      try {
-          const calendarResponse = await calendar.calendarList.list();
-          const calendars = calendarResponse.data.items;
+    try {
+      const userInfo = await oauth2.userinfo.get();
+      const picture = userInfo.data.picture;
+      const name = userInfo.data.name;
+      const email = userInfo.data.email;
+      
+      // By uncommenting  the for loop we can access all events and default calendars.
+      // const calendarResponse = await calendar.calendarList.list();
+      // const calendars = calendarResponse.data.items;
+      // for (const cal of calendars) {
+        const eventsResponse = await calendar.events.list({
+            calendarId: 'primary',
+            timeMin: (new Date()).toISOString(),
+            maxResults: 15,
+            singleEvents: true,
+            orderBy: 'startTime'
+        });
+        const events = eventsResponse.data.items;
 
-          // By uncommenting  the for loop we can access all events and default calendars.
-          // for (const cal of calendars) {
-              const eventsResponse = await calendar.events.list({
-                  calendarId: 'primary',
-                  timeMin: (new Date()).toISOString(),
-                  maxResults: 15,
-                  singleEvents: true,
-                  orderBy: 'startTime'
-              });
-              const events = eventsResponse.data.items;
-
-              const transformedEvents = events.map(event => ({
-                  id: event.id,
-                  email: event.creator.email,
-                  title: event.summary,
-                  description: event.description,
-                  dueDate: event.end.dateTime,
-                  createdAt: event.created,
-                  origin: 'google'
-              }));
-              allEvents.push(...transformedEvents);
+        const transformedEvents = events.map(event => ({
+            id: event.id,
+            email: event.creator.email,
+            title: event.summary,
+            description: event.description,
+            dueDate: event.end.dateTime,
+            createdAt: event.created,
+            picture: picture,
+            name: name,
+            email: email,
+            origin: 'google'
+        }));
+        allEvents.push(...transformedEvents);
           // }
-      } catch (err) {
-          console.error('Error fetching Google events', err);
-      }
+    } catch (err) {
+        console.error('Error fetching Google events', err);
+    }
   }
 
   // Fetch Microsoft events
   for (const token of microsoftTokens) {
       const accessToken = token.access_token;
 
-      const client = Client.init({
-          authProvider: (done) => {
-              done(null, accessToken);
-          },
-      });
-
       try {
+          const client = Client.init({
+              authProvider: (done) => {
+                  done(null, accessToken);
+              },
+          });
+
+          const userInfo = await axios.get('https://graph.microsoft.com/v1.0/me', {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
+          const email = 'Microsoft: '+ userInfo.data.mail || 'Microsoft: '+ userInfo.data.userPrincipalName;
+
+          // Fetch and save profile photo
+          const photoUrl = await fetchAndSaveProfilePhoto(accessToken, email);
+
           const calendarResponse = await client.api('/me/calendars').get();
           const calendars = calendarResponse.value;
 
           // By uncommenting  the for loop we can access all events and default calendars.
           // for (const calendar of calendars) {
-              const calendarId = calendars[0].id;
-              const eventsResponse = await client.api(`/me/calendars/${calendarId}/events`).get();
-              const events = eventsResponse.value;
+          const calendarId = calendars[0].id;
+          const eventsResponse = await client.api(`/me/calendars/${calendarId}/events`).get();
+          const events = eventsResponse.value;
 
               const transformedEvents = events.map(event => ({
                   id: event.id,
-                  email: event.organizer.emailAddress.address,
+                  email: email,
                   title: event.subject,
                   description: event.bodyPreview,
                   dueDate: event.end.dateTime,
                   createdAt: event.createdDateTime,
+                  picture: photoUrl, // Base64-encoded data URL or default icon URL
                   origin: 'microsoft'
               }));
               allEvents.push(...transformedEvents);
           // }
       } catch (error) {
-          console.error('Error fetching Microsoft events', error);
+          console.error('Error fetching Microsoft events:', error.response ? error.response.data : error.message);
       }
   }
 
@@ -211,23 +267,18 @@ app.get('/events', async (req, res) => {
 });
 
 app.get('/logout', (req, res) => {
-    const tokens = req.session.activeGoogleToken;
-    if (!tokens) {
-        console.error('Google access token is missing');
-        res.status(401).send('Unauthorized');
-        return;
+  const email = req.query.email;
+  try {
+    if (req.session.googleTokens) {
+      req.session.googleTokens = req.session.googleTokens.filter(token => token.email !== email);
     }
-    googleOAuth2Client.setCredentials(tokens);
-    googleOAuth2Client.revokeToken(googleOAuth2Client.credentials.access_token, (err, body) => {
-        if (err) {
-            console.error('Error revoking token', err);
-            res.status(500).send('Error logging out');
-            return;
-        }
-        res.clearCookie('connect.sid');
-        req.session.destroy();
-        res.send('Successfully logged out');
-    });
+    if (req.session.microsoftTokens) {
+      req.session.microsoftTokens = req.session.microsoftTokens.filter(token => 'Microsoft: '+token.email !== email);
+    }
+    res.sendStatus(200);
+  } catch (error) {
+    res.sendStatus(201);
+  }
 });
 
 // Microsoft Calendar Routes

@@ -19,10 +19,11 @@
     "@fullcalendar/react": "^6.1.11",
     "axios": "^1.6.8",
     "extendable-media-recorder": "^9.2.4",
+    "flowbite": "^2.3.0",
+    "flowbite-react": "^0.9.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-linkify": "^1.0.0-alpha",
-    "react-push-notification": "^1.5.4",
     "react-quill": "^2.0.0",
     "react-router-dom": "^6.22.3",
     "react-toastify": "^10.0.5"
