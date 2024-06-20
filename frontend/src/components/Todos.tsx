@@ -82,38 +82,6 @@ export const Todos = () => {
     stopListening();
   };
 
-  const filterTodos = async () => {
-    if(!filterByDate && !filterCompleted && !filterInCompleted && !filterToday){
-      await fetchTodos()
-    }
-
-    if(todos.length == 0){
-      await fetchTodos()
-    }
-    return todos.filter(todo => {
-      let matches = true;
-
-      if (filterToday) {
-        const today = new Date().toDateString();
-        matches = matches && new Date(todo.dueDate).toDateString() === today;
-      }
-
-      if (filterCompleted) {
-        matches = matches && todo.isCompleted;
-      }
-
-      if (filterInCompleted) {
-        matches = matches && !todo.isCompleted;
-      }
-
-      if (filterByDate && startDate && endDate) {
-        matches = matches && new Date(todo.dueDate) >= startDate && new Date(todo.dueDate) <= endDate;
-      }
-
-      return matches;
-    });
-  };
-
   const handleFilterChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { id, checked } = event.target;
     switch (id) {
@@ -145,8 +113,39 @@ export const Todos = () => {
   };
 
   const applyFilters = async () => {
-    const filteredTodos = await filterTodos();
-    setTodos(filteredTodos);  
+    if(!filterByDate && !filterCompleted && !filterInCompleted && !filterToday){
+      await fetchTodos()
+    }
+
+    if(todos.length == 0){
+      await fetchTodos()
+    }
+    setTimeout(() => {
+      
+      const filteredTodos = todos.filter(todo => {
+        let matches = true;
+  
+        if (filterToday) {
+          const today = new Date().toDateString();
+          matches = matches && new Date(todo.dueDate).toDateString() === today;
+        }
+  
+        if (filterCompleted) {
+          matches = matches && todo.isCompleted;
+        }
+  
+        if (filterInCompleted) {
+          matches = matches && !todo.isCompleted;
+        }
+  
+        if (filterByDate && startDate && endDate) {
+          matches = matches && new Date(todo.dueDate) >= startDate && new Date(todo.dueDate) <= endDate;
+        }
+  
+        return matches;
+      });
+      setTodos(filteredTodos);  
+    }, 0);
   };
 
   // const Logout = ({ email }) => {
@@ -443,26 +442,64 @@ export const Todos = () => {
     }
   };
 
-  const handleDeleteTask = async (id: number) => {
+  const handleDeleteTask = async (id: number, origins:string) => {
     try {
-      await axios.delete(`http://localhost:3000/api/v1/todos/${id}`, {
-        withCredentials: true,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-        },
-      });
+      if(origins === 'google'){
+        await axios.delete(`http://localhost:3000/deleteEvent/${id}`, {
+          withCredentials: true,
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+          },
+        });
+        fetchTodos();
+        toast.success("Google Task has been deleted", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+        });
+      } else if(origins === 'microsoft'){
+        await axios.delete(`http://localhost:3000/deleteMicrosoftEvent/${id}`, {
+          withCredentials: true,
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+          },
+        });
+        fetchTodos();
+        toast.success("Microsoft Task has been deleted", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+        });
+      } else {
+        await axios.delete(`http://localhost:3000/api/v1/todos/${id}`, {
+          withCredentials: true,
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+          },
+        });
+        fetchTodos();
+        toast.success("Task has been deleted", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+        });
+      }
 
-      fetchTodos();
-      toast.success("Task has been deleted", {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: true,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "light",
-      });
     } catch (error) {
       toast.error("There is some issue, please try again", {
         position: "top-right",
@@ -757,6 +794,7 @@ export const Todos = () => {
             duedate={modalTaskData?.dueDate || ""}
             reminderTime={modalTaskData?.reminderTime || ""}
             reminderDays={modalTaskData?.reminderDays || ""}
+            origin={modalTaskData?.origin || ""}
             id={modalTaskData?.id || ""}
             onTodoAdded={handleTodoAdded}
           />
@@ -922,7 +960,8 @@ export const Todos = () => {
                               </div>
                             </div>
                           )}
-                          <div className="flex justify-between items-center border-dashed border-slate-200 dark:border-slate-700/[.3] border-t-2 w-full pt-4 mt-4">
+                          <div className={`flex ${todo.origin == undefined ? 'justify-between' : 'justify-end'} items-center border-dashed border-slate-200 dark:border-slate-700/[.3] border-t-2 w-full pt-4 mt-4`}>
+                          {todo.origin == undefined &&
                             <button
                               title={
                                 todo.isCompleted
@@ -944,6 +983,7 @@ export const Todos = () => {
                                   : "Mark as Completed"}
                               </span>
                             </button>
+                          }
                             <div className="flex items-center">
                               <div>
                                 {todo.email ?
@@ -956,7 +996,7 @@ export const Todos = () => {
                               <div>
                               <Dropdown label="" dismissOnClick={true} renderTrigger={() => <svg className="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 4 15">
                               <path d="M3.5 1.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6.041a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 5.959a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"/></svg>}>
-                                <Dropdown.Item onClick={() => handleDeleteTask(todo.id)}>Delete</Dropdown.Item>
+                                <Dropdown.Item onClick={() => handleDeleteTask(todo.id, todo.origin)}>Delete</Dropdown.Item>
                                 <Dropdown.Item onClick={() => handleEditTask(todo)}>Edit</Dropdown.Item>
                               </Dropdown>
                               </div>

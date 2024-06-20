@@ -15,6 +15,7 @@ export const Model = ({
   duedate: initialDuedate,
   reminderTime: initialReminderTime,
   reminderDays: initialReminderDays,
+  origin:origin,
   id: id,
   onTodoAdded,
 }) => {
@@ -90,6 +91,52 @@ export const Model = ({
     }
   };
 
+  function convertDateToISO(dateString) {
+    // Split the date string into components
+    const [day, month, year] = dateString.split('/');
+  
+    // Create a new Date object
+    const date = new Date(`${year}-${month}-${day}T${time}Z`);
+  
+    // Format the date to ISO string
+    const isoString = date.toISOString();
+  
+    // Return the formatted string, trimming to just the necessary part
+    return isoString;
+  }
+
+  function transformTaskToGoogleEvent(task) {
+    return {
+      summary: task.title,
+      description: task.description,
+      start: {
+        dateTime: task.dueDate,
+        timeZone: 'UTC'
+      },
+      end: {
+        dateTime: task.dueDate, // Assuming dueDate is the end time for simplicity
+        timeZone: 'UTC'
+      },
+      reminders: {
+        useDefault: true
+      }
+    };
+  }
+  function transformTaskToMicrosoftEvent(task) {
+    return {
+      subject: task.title,
+      bodyPreview: task.description,
+      start: {
+        dateTime: task.dueDate,
+        timeZone: 'UTC'
+      },
+      end: {
+        dateTime: task.dueDate, // Assuming dueDate is the end time for simplicity
+        timeZone: 'UTC'
+      }
+    };
+  }
+
   const handleSubmit = async (event:any) => {
     event.preventDefault();
     try {
@@ -124,35 +171,121 @@ export const Model = ({
         });
         console.log("Task created:", response.data);
       } else {
-        // Edit existing task
-        response = await axios.put(
-          `http://localhost:3000/api/v1/todos/${id}`,
-          {
+        try {
+          let response, task;
+          task = {
+            id:id,
             title: taskTitle,
             description: taskDescription,
             dueDate: dueDate,
             reminderTime: reminderTime,
             reminderDays: reminderDays,
-            isCompleted: initialIsCompleted,
-          },
-          {
-            withCredentials: true,
-            headers: {
-              "Access-Control-Allow-Origin": "*",
-            },
+            isCompleted: isCompleted,
+            origin: origin
           }
-        );
-        toast.success("Task modified successfully", {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: true,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-          theme: "light",
-        });
-        console.log("Task updated:", response.data);
+          if (task.origin === 'google') {
+            const updatedEvent = transformTaskToGoogleEvent(task);
+      
+            response = await axios.put(
+              `http://localhost:3000/editEvent`,
+              {
+                eventId: task.id,
+                updatedEvent: updatedEvent
+              },
+              {
+                withCredentials: true,
+                headers: {
+                  "Access-Control-Allow-Origin": "*",
+                },
+              }
+            );
+      
+            toast.success("Google event modified successfully", {
+              position: "top-right",
+              autoClose: 3000,
+              hideProgressBar: true,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              progress: undefined,
+              theme: "light",
+            });
+      
+            console.log("Google event updated:", response.data);
+          } else if(task.origin === 'microsoft'){
+            const updatedEvent = transformTaskToMicrosoftEvent(task);
+      
+            response = await axios.put(
+              `http://localhost:3000/editMicrosoftEvent`,
+              {
+                eventId: task.id,
+                updatedEvent: updatedEvent
+              },
+              {
+                withCredentials: true,
+                headers: {
+                  "Access-Control-Allow-Origin": "*",
+                },
+              }
+            );
+      
+            toast.success("Microsoft event modified successfully", {
+              position: "top-right",
+              autoClose: 3000,
+              hideProgressBar: true,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              progress: undefined,
+              theme: "light",
+            });
+      
+            console.log("Google event updated:", response.data);
+          } else {
+            response = await axios.put(
+              `http://localhost:3000/api/v1/todos/${id}`,
+              {
+                title: task.title,
+                description: task.description,
+                dueDate: task.dueDate,
+                reminderTime: task.reminderTime,
+                reminderDays: task.reminderDays,
+                isCompleted: task.isCompleted,
+              },
+              {
+                withCredentials: true,
+                headers: {
+                  "Access-Control-Allow-Origin": "*",
+                },
+              }
+            );
+      
+            toast.success("Task modified successfully", {
+              position: "top-right",
+              autoClose: 3000,
+              hideProgressBar: true,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              progress: undefined,
+              theme: "light",
+            });
+      
+            console.log("Task updated:", response.data);
+          }
+        } catch (error) {
+          console.error("Error updating task:", error);
+          toast.error("Failed to modify task", {
+            position: "top-right",
+            autoClose: 3000,
+            hideProgressBar: true,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+            theme: "light",
+          });
+        }
       }
 
       onClose();

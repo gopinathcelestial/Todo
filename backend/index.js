@@ -58,55 +58,56 @@ app.use('/api/v1', require('./routes/todoRoutes'));
 
 // Google Calendar Routes
 app.get('/googlelogin', (req, res) => {
-  const url = googleOAuth2Client.generateAuthUrl({
-    access_type: 'offline',
-    scope: ['https://www.googleapis.com/auth/calendar.readonly',
-      'https://www.googleapis.com/auth/userinfo.profile',
-      'https://www.googleapis.com/auth/userinfo.email',
-      'openid'],
-  });
+    const url = googleOAuth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: ['https://www.googleapis.com/auth/calendar',
+            'https://www.googleapis.com/auth/calendar.events',
+            'https://www.googleapis.com/auth/userinfo.profile',
+            'https://www.googleapis.com/auth/userinfo.email',
+            'openid'],
+    });
     res.redirect(url);
 });
 
 app.get('/redirect', async (req, res) => {
-  const code = req.query.code;
+    const code = req.query.code;
 
-  try {
-    const { tokens } = await googleOAuth2Client.getToken(code);
-    googleOAuth2Client.setCredentials(tokens);
+    try {
+        const { tokens } = await googleOAuth2Client.getToken(code);
+        googleOAuth2Client.setCredentials(tokens);
 
-    // Fetch user info using the Google API client
-    const oauth2 = google.oauth2({
-      auth: googleOAuth2Client,
-      version: 'v2'
-    });
+        // Fetch user info using the Google API client
+        const oauth2 = google.oauth2({
+            auth: googleOAuth2Client,
+            version: 'v2'
+        });
 
-    const userInfo = await oauth2.userinfo.get();
-    const email = userInfo.data.email;
+        const userInfo = await oauth2.userinfo.get();
+        const email = userInfo.data.email;
 
-    if (!email) {
-      console.error('Could not extract email from user info');
-      res.send('Error extracting email');
-      return;
+        if (!email) {
+            console.error('Could not extract email from user info');
+            res.send('Error extracting email');
+            return;
+        }
+
+        // Assuming req.session.googleTokens is an array of token objects
+        req.session.googleTokens = req.session.googleTokens || [];
+
+        const tokenExists = req.session.googleTokens.some(token => token.email === email);
+
+        if (!tokenExists) {
+            req.session.googleTokens.push({ ...tokens, email });
+            res.redirect('http://localhost:5173/?login=success');
+        } else {
+            res.redirect('http://localhost:5173/?login=alreadyloggedin');
+        }
+
+    } catch (error) {
+        console.error('Error during Google OAuth flow:', error);
+        res.send('Error');
+        res.redirect('http://localhost:5173/?login=failed');
     }
-
-    // Assuming req.session.googleTokens is an array of token objects
-    req.session.googleTokens = req.session.googleTokens || [];
-
-    const tokenExists = req.session.googleTokens.some(token => token.email === email);
-
-    if (!tokenExists) {
-      req.session.googleTokens.push({ ...tokens, email });
-      res.redirect('http://localhost:5173/?login=success');
-    }else{
-      res.redirect('http://localhost:5173/?login=alreadyloggedin');
-    }
-
-  } catch (error) {
-    console.error('Error during Google OAuth flow:', error);
-    res.send('Error');
-    res.redirect('http://localhost:5173/?login=failed');
-  }
 });
 
 app.get('/calendars', async (req, res) => {
@@ -129,9 +130,114 @@ app.get('/calendars', async (req, res) => {
     });
 });
 
+app.put('/editEvent', async (req, res) => {
+    const { eventId, updatedEvent } = req.body;
+    const tokens = req.session.googleTokens;
+
+    if (!tokens) {
+        console.error('Google access token is missing');
+        res.status(401).send('Unauthorized');
+        return;
+    }
+    googleOAuth2Client.setCredentials({
+        access_token: tokens[0].access_token
+    });
+    const calendar = google.calendar({ version: 'v3', auth: googleOAuth2Client });
+
+    try {
+        const response = await calendar.events.update({
+            calendarId: 'primary',
+            eventId: eventId,
+            requestBody: updatedEvent,
+        });
+        res.json(response.data);
+    } catch (error) {
+        console.error('Error updating Google event', error);
+        res.status(500).send('Error updating event');
+    }
+});
+
+app.delete('/deleteEvent/:id', async (req, res) => {
+
+    const tokens = req.session.googleTokens;
+
+    if (!tokens) {
+        console.error('Google access token is missing');
+        res.status(401).send('Unauthorized');
+        return;
+    }
+    console.log(tokens)
+
+    googleOAuth2Client.setCredentials({
+        access_token: tokens[0].access_token
+    });
+    const calendar = google.calendar({ version: 'v3', auth: googleOAuth2Client });
+
+    try {
+        await calendar.events.delete({
+            calendarId: 'primary',
+            eventId: req.params.id,
+        });
+        res.send('Event deleted successfully');
+    } catch (error) {
+        console.error('Error deleting Google event', error);
+        res.status(500).send('Error deleting event');
+    }
+});
+
+app.put('/editMicrosoftEvent', async (req, res) => {
+    const { eventId, updatedEvent } = req.body;
+    const accessToken = req.session.microsoftTokens ? req.session.microsoftTokens[0].access_token : null;
+
+    if (!accessToken) {
+        console.error('Microsoft access token is missing');
+        res.status(401).send('Unauthorized');
+        return;
+    }
+
+    const client = Client.init({
+        authProvider: (done) => {
+            done(null, accessToken);
+        },
+    });
+
+    try {
+        const response = await client.api(`/me/events/${eventId}`).patch(updatedEvent);
+        res.json(response);
+    } catch (error) {
+        console.error('Error updating Microsoft event', error);
+        res.status(500).send('Error updating event');
+    }
+});
+
+app.delete('/deleteMicrosoftEvent/:id', async (req, res) => {
+    const eventId = req.params.id;
+    const accessToken = req.session.microsoftTokens ? req.session.microsoftTokens[0].access_token : null;
+    if (!accessToken) {
+        console.error('Microsoft access token is missing');
+        res.status(401).send('Unauthorized');
+        return;
+    }
+
+    const client = Client.init({
+        authProvider: (done) => {
+            done(null, accessToken);
+        },
+    });
+
+    try {
+        await client.api(`/me/events/${eventId}`).delete();
+        res.send('Event deleted successfully');
+    } catch (error) {
+        console.error('Error deleting Microsoft event', error);
+        res.status(500).send('Error deleting event');
+    }
+});
+
+
 app.get('/events', async (req, res) => {
-  const googleTokens = req.session.googleTokens || [];
-  const microsoftTokens = req.session.microsoftTokens || [];
+    const googleTokens = req.session.googleTokens || [];
+    const microsoftTokens = req.session.microsoftTokens || [];
 
   const allEvents = [];
   const defaultImage = "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Windows_10_Default_Profile_Picture.svg/1200px-Windows_10_Default_Profile_Picture.svg.png";
@@ -216,9 +322,9 @@ app.get('/events', async (req, res) => {
     }
   }
 
-  // Fetch Microsoft events
-  for (const token of microsoftTokens) {
-      const accessToken = token.access_token;
+    // Fetch Microsoft events
+    for (const token of microsoftTokens) {
+        const accessToken = token.access_token;
 
       try {
           const client = Client.init({
@@ -263,7 +369,7 @@ app.get('/events', async (req, res) => {
       }
   }
 
-  res.json(allEvents);
+    res.json(allEvents);
 });
 
 app.get('/logout', (req, res) => {
@@ -285,72 +391,72 @@ app.get('/logout', (req, res) => {
 app.get('/microsoftlogin', (req, res) => {
     const authorizationUri = microsoftOAuth2Client.authorizeURL({
         redirect_uri: process.env.MICROSOFT_REDIRECT,
-        scope: 'openid profile offline_access user.read calendars.read',
+        scope: 'openid profile offline_access user.read calendars.readwrite',
     });
     res.redirect(authorizationUri);
 });
 
 app.get('/microsoft/redirect', async (req, res) => {
-  const code = req.query.code;
-
-  try {
-    const tokenResponse = await getMicrosoftToken(code);
-    const accessToken = tokenResponse.access_token;
-    const userInfo = await getMicrosoftUserInfo(accessToken);
-    const email = userInfo.mail || userInfo.userPrincipalName;
-
-    req.session.microsoftTokens = req.session.microsoftTokens || [];
-
-    const tokenExists = req.session.microsoftTokens.some(token => token.email === email);
-
-    if (!tokenExists) {
-      req.session.microsoftTokens.push({ ...tokenResponse, email });
-      res.redirect('http://localhost:5173?login=success');
-    } else {
-      res.redirect('http://localhost:5173?login=alreadyloggedin');
-    }
-
-  } catch (err) {
-    res.redirect('http://localhost:5173?login=failed');
-    console.error('Error during Microsoft OAuth flow', err);
-    res.send('Error');
-  }
-
-  async function getMicrosoftToken(code) {
-    const tokenParams = new URLSearchParams({
-      client_id: process.env.MICROSOFT_CLIENT_ID,
-      client_secret: process.env.MICROSOFT_SECRET_VALUE,
-      code,
-      redirect_uri: process.env.MICROSOFT_REDIRECT,
-      grant_type: 'authorization_code',
-  });
+    const code = req.query.code;
 
     try {
-      const response = await axios.post('https://login.microsoftonline.com/common/oauth2/v2.0/token', tokenParams, {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    });
+        const tokenResponse = await getMicrosoftToken(code);
+        const accessToken = tokenResponse.access_token;
+        const userInfo = await getMicrosoftUserInfo(accessToken);
+        const email = userInfo.mail || userInfo.userPrincipalName;
 
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching Microsoft token:', error.response ? error.response.data : error.message);
-      throw error;
+        req.session.microsoftTokens = req.session.microsoftTokens || [];
+
+        const tokenExists = req.session.microsoftTokens.some(token => token.email === email);
+
+        if (!tokenExists) {
+            req.session.microsoftTokens.push({ ...tokenResponse, email });
+            res.redirect('http://localhost:5173?login=success');
+        } else {
+            res.redirect('http://localhost:5173?login=alreadyloggedin');
+        }
+
+    } catch (err) {
+        res.redirect('http://localhost:5173?login=failed');
+        console.error('Error during Microsoft OAuth flow', err);
+        res.send('Error');
     }
-  }
 
-  async function getMicrosoftUserInfo(accessToken) {
-    try {
-      const response = await axios.get('https://graph.microsoft.com/v1.0/me', {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
+    async function getMicrosoftToken(code) {
+        const tokenParams = new URLSearchParams({
+            client_id: process.env.MICROSOFT_CLIENT_ID,
+            client_secret: process.env.MICROSOFT_SECRET_VALUE,
+            code,
+            redirect_uri: process.env.MICROSOFT_REDIRECT,
+            grant_type: 'authorization_code',
+        });
 
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching Microsoft user info:', error.response ? error.response.data : error.message);
-      throw error;
+        try {
+            const response = await axios.post('https://login.microsoftonline.com/common/oauth2/v2.0/token', tokenParams, {
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            });
+
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching Microsoft token:', error.response ? error.response.data : error.message);
+            throw error;
+        }
     }
-  }
+
+    async function getMicrosoftUserInfo(accessToken) {
+        try {
+            const response = await axios.get('https://graph.microsoft.com/v1.0/me', {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                },
+            });
+
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching Microsoft user info:', error.response ? error.response.data : error.message);
+            throw error;
+        }
+    }
 
 });
 
