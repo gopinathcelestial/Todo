@@ -825,6 +825,8 @@ export const Todos = () => {
             title={SyncTitle}
             isOpen={isSyncOpen}
             onClose={() => setIsSyncOpen(false)}
+            todos = {todos}
+            logout = {logout}
           />
           <section>
             {showCalendar ? (

@@ -3,6 +3,7 @@ import axios from "axios";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { toast } from "react-toastify";
+import { Avatar } from "flowbite-react";
 import useSpeechToText from "../hooks/useSpeechToText";
 
 export const Model = ({
@@ -15,7 +16,6 @@ export const Model = ({
   duedate: initialDuedate,
   reminderTime: initialReminderTime,
   reminderDays: initialReminderDays,
-  origin:origin,
   id: id,
   onTodoAdded,
 }) => {
@@ -91,52 +91,6 @@ export const Model = ({
     }
   };
 
-  function convertDateToISO(dateString) {
-    // Split the date string into components
-    const [day, month, year] = dateString.split('/');
-  
-    // Create a new Date object
-    const date = new Date(`${year}-${month}-${day}T${time}Z`);
-  
-    // Format the date to ISO string
-    const isoString = date.toISOString();
-  
-    // Return the formatted string, trimming to just the necessary part
-    return isoString;
-  }
-
-  function transformTaskToGoogleEvent(task) {
-    return {
-      summary: task.title,
-      description: task.description,
-      start: {
-        dateTime: task.dueDate,
-        timeZone: 'UTC'
-      },
-      end: {
-        dateTime: task.dueDate, // Assuming dueDate is the end time for simplicity
-        timeZone: 'UTC'
-      },
-      reminders: {
-        useDefault: true
-      }
-    };
-  }
-  function transformTaskToMicrosoftEvent(task) {
-    return {
-      subject: task.title,
-      bodyPreview: task.description,
-      start: {
-        dateTime: task.dueDate,
-        timeZone: 'UTC'
-      },
-      end: {
-        dateTime: task.dueDate, // Assuming dueDate is the end time for simplicity
-        timeZone: 'UTC'
-      }
-    };
-  }
-
   const handleSubmit = async (event:any) => {
     event.preventDefault();
     try {
@@ -171,121 +125,35 @@ export const Model = ({
         });
         console.log("Task created:", response.data);
       } else {
-        try {
-          let response, task;
-          task = {
-            id:id,
+        // Edit existing task
+        response = await axios.put(
+          `http://localhost:3000/api/v1/todos/${id}`,
+          {
             title: taskTitle,
             description: taskDescription,
             dueDate: dueDate,
             reminderTime: reminderTime,
             reminderDays: reminderDays,
-            isCompleted: isCompleted,
-            origin: origin
+            isCompleted: initialIsCompleted,
+          },
+          {
+            withCredentials: true,
+            headers: {
+              "Access-Control-Allow-Origin": "*",
+            },
           }
-          if (task.origin === 'google') {
-            const updatedEvent = transformTaskToGoogleEvent(task);
-      
-            response = await axios.put(
-              `http://localhost:3000/editEvent`,
-              {
-                eventId: task.id,
-                updatedEvent: updatedEvent
-              },
-              {
-                withCredentials: true,
-                headers: {
-                  "Access-Control-Allow-Origin": "*",
-                },
-              }
-            );
-      
-            toast.success("Google event modified successfully", {
-              position: "top-right",
-              autoClose: 3000,
-              hideProgressBar: true,
-              closeOnClick: true,
-              pauseOnHover: true,
-              draggable: true,
-              progress: undefined,
-              theme: "light",
-            });
-      
-            console.log("Google event updated:", response.data);
-          } else if(task.origin === 'microsoft'){
-            const updatedEvent = transformTaskToMicrosoftEvent(task);
-      
-            response = await axios.put(
-              `http://localhost:3000/editMicrosoftEvent`,
-              {
-                eventId: task.id,
-                updatedEvent: updatedEvent
-              },
-              {
-                withCredentials: true,
-                headers: {
-                  "Access-Control-Allow-Origin": "*",
-                },
-              }
-            );
-      
-            toast.success("Microsoft event modified successfully", {
-              position: "top-right",
-              autoClose: 3000,
-              hideProgressBar: true,
-              closeOnClick: true,
-              pauseOnHover: true,
-              draggable: true,
-              progress: undefined,
-              theme: "light",
-            });
-      
-            console.log("Google event updated:", response.data);
-          } else {
-            response = await axios.put(
-              `http://localhost:3000/api/v1/todos/${id}`,
-              {
-                title: task.title,
-                description: task.description,
-                dueDate: task.dueDate,
-                reminderTime: task.reminderTime,
-                reminderDays: task.reminderDays,
-                isCompleted: task.isCompleted,
-              },
-              {
-                withCredentials: true,
-                headers: {
-                  "Access-Control-Allow-Origin": "*",
-                },
-              }
-            );
-      
-            toast.success("Task modified successfully", {
-              position: "top-right",
-              autoClose: 3000,
-              hideProgressBar: true,
-              closeOnClick: true,
-              pauseOnHover: true,
-              draggable: true,
-              progress: undefined,
-              theme: "light",
-            });
-      
-            console.log("Task updated:", response.data);
-          }
-        } catch (error) {
-          console.error("Error updating task:", error);
-          toast.error("Failed to modify task", {
-            position: "top-right",
-            autoClose: 3000,
-            hideProgressBar: true,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-            theme: "light",
-          });
-        }
+        );
+        toast.success("Task modified successfully", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+        });
+        console.log("Task updated:", response.data);
       }
 
       onClose();
@@ -496,77 +364,165 @@ export const Model = ({
   );
 };
 
-export const SyncAcc = ({
-  isOpen,
-  onClose,
-  title,
-}) => {
-  // Click handler for Google login
-  const handleGoogleLogin = async (event:any) => {
+export const SyncAcc = ({ isOpen, onClose, title, todos, logout }) => {
+  const uniqueGoogleEmails = new Set();
+  const uniqueMicrosoftEmails = new Set();
+  const [selectedAvatar, setSelectedAvatar] = useState(null);
+  const emailCounts = {};
+
+  const handleAvatarClick = (email) => {
+    setSelectedAvatar(email);
+  };
+
+  const handleGoogleLogin = async (event) => {
     event.preventDefault();
     window.location.href = "http://localhost:3000/googlelogin";
   };
 
-  // Click handler for Microsoft login
-  const handleMicrosoftLogin = async (event:any) => {
+  const handleMicrosoftLogin = async (event) => {
     event.preventDefault();
     window.location.href = "http://localhost:3000/microsoftlogin";
   };
 
-  // Render modal content with Google and Microsoft login buttons
+  todos.forEach((todo) => {
+    const { email } = todo;
+    emailCounts[email] = (emailCounts[email] || 0) + 1;
+  });
+
+  const handlelogout = async () => {
+    if (selectedAvatar) {
+      console.log(selectedAvatar);
+      logout(selectedAvatar);
+      toast.success(`Selected avatar: ${selectedAvatar}`, {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: true,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+      });
+    } else {
+      toast.error("Please select an account from already synced accounts to logout", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: true,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+      });
+    }
+  };
+
   return (
-    <div className={`fixed top-0 left-0 w-full h-full flex items-center justify-center bg-gray-500 bg-opacity-50 ${isOpen ? '' : 'hidden'}`}>
+    <div className={`fixed top-0 left-0 w-full h-full flex items-center justify-center bg-gray-500 bg-opacity-50 ${isOpen ? "" : "hidden"}`}>
       <div className="relative bg-slate-200 max-w-lg w-full rounded-lg p-3 sm:p-5 flex flex-col justify-start dark:bg-slate-900">
-        <button
-          aria-label="close alert"
-          className="absolute top-3 right-3 sm:right-4"
-          onClick={onClose}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth="1.5"
-            stroke="currentColor"
-            className="w-6 h-6"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M6 18L18 6M6 6l12 12"
-            ></path>
+        <button aria-label="close alert" className="absolute top-3 right-3 sm:right-4" onClick={onClose}>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-6 h-6">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"></path>
           </svg>
         </button>
         <h2 className="font-medium mb-5 text-lg md:text-2xl">{title}</h2>
         <div className="flex justify-between items-center mb-5">
-          <button
-            className="btn px-2 text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700 flex items-center"
-            id="google"
-            onClick={handleGoogleLogin}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="30" height="30" viewBox="0 0 48 48">
-              <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path>
-              <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path>
-              <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path>
-              <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path>
-            </svg>
-            <span className="ms-3 whitespace-nowrap"></span>
-            Sync with Google
-          </button>
-          <div>OR</div>
-          <button
-            className="btn px-2 text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700 flex items-center"
-            id="microsoft"
-            onClick={handleMicrosoftLogin}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="30" height="30" viewBox="0 0 48 48">
-              <path fill="#ff5722" d="M6 6H22V22H6z" transform="rotate(-180 14 14)"></path>
-              <path fill="#4caf50" d="M26 6H42V22H26z" transform="rotate(-180 34 14)"></path>
-              <path fill="#ffc107" d="M26 26H42V42H26z" transform="rotate(-180 34 34)"></path>
-              <path fill="#03a9f4" d="M6 26H22V42H6z" transform="rotate(-180 14 34)"></path>
-            </svg>
-            <span className="ms-3 whitespace-nowrap"></span>
-            Sync with Microsoft
+          <div>
+            <button className="btn px-2 text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700 flex items-center" id="google" onClick={handleGoogleLogin}>
+              <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="30" height="30" viewBox="0 0 48 48">
+                <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path>
+                <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path>
+                <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path>
+                <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path>
+              </svg>
+              <span className="ms-3 whitespace-nowrap">Sync with Google</span>
+            </button>
+          </div>
+          <div className="flex items-center">
+            <div className="border-b border-gray-400 w-full"></div>
+            <div className="text-center mx-4 text-gray-500 dark:text-gray-300">OR</div>
+            <div className="border-b border-gray-400 w-full"></div>
+          </div>
+          <div>
+            <button className="btn px-2 text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700 flex items-center" id="microsoft" onClick={handleMicrosoftLogin}>
+              <svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="30" height="30" viewBox="0 0 48 48">
+                <path fill="#ff5722" d="M6 6H22V22H6z" transform="rotate(-180 14 14)"></path>
+                <path fill="#4caf50" d="M26 6H42V22H26z" transform="rotate(-180 34 14)"></path>
+                <path fill="#ffc107" d="M26 26H42V42H26z" transform="rotate(-180 34 34)"></path>
+                <path fill="#03a9f4" d="M6 26H22V42H6z" transform="rotate(-180 14 34)"></path>
+              </svg>
+              <span className="ms-3 whitespace-nowrap">Sync with Microsoft</span>
+            </button>
+          </div>
+        </div>
+        <div className="flex justify-center pt-5"> Already logged in accounts</div>
+        <div className="flex justify-center pt-5">
+          <div className="w-1/2 flex justify-center pr-2">
+            <Avatar.Group>
+              {todos
+                .filter((todo) => todo.origin === "google")
+                .filter((todo) => {
+                  if (!uniqueGoogleEmails.has(todo.email)) {
+                    uniqueGoogleEmails.add(todo.email);
+                    return true;
+                  }
+                  return false;
+                })
+                .map((todo) => (
+                  <Avatar
+                    key={todo.email}
+                    title={todo.email}
+                    img={todo.picture}
+                    onClick={() => handleAvatarClick(todo.email)}
+                    rounded
+                    bordered={selectedAvatar === todo.email}
+                    color={selectedAvatar === todo.email ? "pink" : ""}
+                    stacked
+                  />
+                ))}
+              {Object.keys(emailCounts).map((email) => {
+                if (emailCounts[email] > 3 && uniqueGoogleEmails.has(email)) {
+                  return <Avatar.Counter key={`counter-${email}`} total={emailCounts[email] - 3} href="#" />;
+                }
+                return null;
+              })}
+            </Avatar.Group>
+          </div>
+          <div className="w-1/2 flex justify-center pl-2">
+            <Avatar.Group>
+              {todos
+                .filter((todo) => todo.origin === "microsoft")
+                .filter((todo) => {
+                  if (!uniqueMicrosoftEmails.has(todo.email)) {
+                    uniqueMicrosoftEmails.add(todo.email);
+                    return true;
+                  }
+                  return false;
+                })
+                .map((todo) => (
+                  <Avatar
+                    key={todo.email}
+                    title={todo.email}
+                    img={todo.picture}
+                    onClick={() => handleAvatarClick(todo.email)}
+                    rounded
+                    bordered={selectedAvatar === todo.email}
+                    color={selectedAvatar === todo.email ? "pink" : ""}
+                    stacked
+                  />
+                ))}
+              {Object.keys(emailCounts).map((email) => {
+                if (emailCounts[email] > 3 && uniqueMicrosoftEmails.has(email)) {
+                  return <Avatar.Counter key={`counter-${email}`} total={emailCounts[email] - 3} href="#" />;
+                }
+                return null;
+              })}
+            </Avatar.Group>
+          </div>
+        </div>
+        <div className="flex justify-center pt-5">
+          <button className="btn px-2 text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700 flex items-center" onClick={handlelogout}>
+            <span className="ms-3 whitespace-nowrap">Logout selected account</span>
           </button>
         </div>
       </div>
