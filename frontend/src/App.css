@@ -1,15 +1,35 @@
 @keyframes animate {
-    0% {
-      fill: red;
-    }
-    50% {
-      fill: #c2c2c2;
-    }
-    100% {
-      fill: red;
-    }
+  0% {
+    fill: red;
   }
-  
-  .animate-blink {
-    animation: animate 1s linear infinite;
+  50% {
+    fill: #c2c2c2;
   }
+  100% {
+    fill: red;
+  }
+}
+
+.animate-blink {
+  animation: animate 1s linear infinite;
+}
+
+@keyframes spinner {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid rgba(0,0,0,0.1);
+  border-left-color: #000;
+  border-radius: 50%;
+  animation: spinner 0.6s linear infinite;
+}
+
+.spinner-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh; /* Adjust as necessary */
+}
