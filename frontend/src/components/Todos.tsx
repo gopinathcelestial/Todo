@@ -979,7 +979,7 @@ export const Todos = () => {
                 <div className="tasks-container">
                   {isLoading ? (
                     <div className="spinner-container">
-                      <div className="spinner"></div> {/* Placeholder for spinner */}
+                      <div className="spinner"></div>
                     </div>
                   ) : (
                     <ul className="tasksList mt-4 grid gap-2 sm:gap-4 xl:gap-6 2xl:grid-cols-4 xl:grid-cols-3 lg:grid-cols-4 md:grid-cols-3 grid-cols-2 items-end">
@@ -1022,7 +1022,7 @@ export const Todos = () => {
                                   <div>
                                     <span className="font-semibold">Due Date:</span> {formatDate(todo.dueDate)}
                                   </div>
-                                  <div>
+                                  <div title="Recurring Event">
                                     {todo.reminderDays?.length !== 0 && todo.reminderDays?.length !== undefined && (
                                       <svg width="1.3rem" x="0px" y="0px" viewBox="0 0 100 125"><g transform="translate(0,-952.36218)"><path d="M 50 5 C 25.182705 5 5 25.18274 5 50 C 5 74.8173 25.18271 95 50 95 C 74.817291 95 95 74.8174 95 50 A 3.0003 3.0003 0 1 0 89 50 C 89 71.5748 71.574659 89 50 89 C 28.425342 89 11 71.5747 11 50 C 11 28.42538 28.425347 11 50 11 C 61.153759 11 71.301196 15.58823 78.4375 23 L 70.40625 23 A 3.0003 3.0003 0 1 0 70.40625 29 L 84.8125 29 A 3.0003 3.0003 0 0 0 87.8125 26 L 87.8125 11.59375 A 3.0003 3.0003 0 0 0 84.75 8.53125 A 3.0003 3.0003 0 0 0 81.8125 11.59375 L 81.8125 17.875 C 73.615577 9.8628178 62.308129 5 50 5 z M 48.75 25.75 A 3.0003 3.0003 0 0 0 45.8125 28.8125 L 45.8125 52.375 A 3.0003 3.0003 0 0 0 46.6875 54.5 L 59.09375 66.9375 A 3.0052038 3.0052038 0 0 0 63.34375 62.6875 L 51.8125 51.1875 L 51.8125 28.8125 A 3.0003 3.0003 0 0 0 48.75 25.75 z " transform="translate(0,952.36218)" /></g></svg>)}
                                   </div>
