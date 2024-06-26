@@ -3,7 +3,7 @@ import axios from "axios";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { toast } from "react-toastify";
-import { Avatar } from "flowbite-react";
+import { Avatar, ListGroup, Tooltip } from "flowbite-react";
 import useSpeechToText from "../hooks/useSpeechToText";
 
 export const Model = ({
@@ -368,11 +368,12 @@ export const SyncAcc = ({ isOpen, onClose, title, todos, logout }) => {
   const uniqueGoogleEmails = new Set();
   const uniqueMicrosoftEmails = new Set();
   const [selectedAvatar, setSelectedAvatar] = useState(null);
+  const [displayAs, setDisplayAs] = useState('list');
   const emailCounts = {};
+  const logoutIcon = 'https://c3.klipartz.com/pngpicture/421/12/sticker-png-sword-art-online-vector-icons-logout-thumbnail.png';
+  const stackedIcon = <svg width="30px" height="30px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" transform="rotate(0)"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M18 8L6 8M6 8L10.125 4M6 8L10.125 12" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> <path opacity="0.5" d="M6 16L18 16M18 16L13.875 12M18 16L13.875 20" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
+  const listIcon = <svg width="30px" height="30px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path opacity="0.5" d="M16 18L16 6M16 6L20 10.125M16 6L12 10.125" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M8 6L8 18M8 18L12 13.875M8 18L4 13.875" stroke="#1C274C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
 
-  const handleAvatarClick = (email) => {
-    setSelectedAvatar(email);
-  };
 
   const handleGoogleLogin = async (event) => {
     event.preventDefault();
@@ -389,11 +390,11 @@ export const SyncAcc = ({ isOpen, onClose, title, todos, logout }) => {
     emailCounts[email] = (emailCounts[email] || 0) + 1;
   });
 
-  const handlelogout = async () => {
-    if (selectedAvatar) {
-      console.log(selectedAvatar);
-      logout(selectedAvatar);
-      toast.success(`Selected avatar: ${selectedAvatar}`, {
+  const handleLogout = async (email) => {
+    if (selectedAvatar || email) {
+      console.log(selectedAvatar||email);
+      logout(selectedAvatar||email);
+      toast.success(`Selected avatar: ${selectedAvatar||email}`, {
         position: "top-right",
         autoClose: 3000,
         hideProgressBar: true,
@@ -403,22 +404,28 @@ export const SyncAcc = ({ isOpen, onClose, title, todos, logout }) => {
         progress: undefined,
         theme: "light",
       });
+      setSelectedAvatar(null);
+    }
+  };
+
+  const displayAccountAs = () =>{
+    if (displayAs === 'avatar') {
+      setDisplayAs('list');
+    }else{
+      setDisplayAs('avatar');
+    }
+  };
+
+  const handleAvatarClick = (email) => {
+    if (selectedAvatar === email) {
+      setSelectedAvatar(null);
     } else {
-      toast.error("Please select an account from already synced accounts to logout", {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: true,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "light",
-      });
+      setSelectedAvatar(email);
     }
   };
 
   return (
-    <div className={`fixed top-0 left-0 w-full h-full flex items-center justify-center bg-gray-500 bg-opacity-50 ${isOpen ? "" : "hidden"}`}>
+    <div className={`z-50 fixed top-0 left-0 w-full h-full flex items-center justify-center bg-gray-500 bg-opacity-50 ${isOpen ? "" : "hidden"}`}>
       <div className="relative bg-slate-200 max-w-lg w-full rounded-lg p-3 sm:p-5 flex flex-col justify-start dark:bg-slate-900">
         <button aria-label="close alert" className="absolute top-3 right-3 sm:right-4" onClick={onClose}>
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-6 h-6">
@@ -455,40 +462,74 @@ export const SyncAcc = ({ isOpen, onClose, title, todos, logout }) => {
             </button>
           </div>
         </div>
-        <div className="flex justify-center pt-5"> Already logged in accounts</div>
+        <div className="flex items-center justify-between mr-[5px]"> Already logged in accounts <span title={displayAs === 'avatar'? 'View as List': 'View as Stacked'} onClick={()=>{displayAccountAs()}}>{displayAs === 'avatar'? stackedIcon: listIcon}</span></div>
         <div className="flex justify-center pt-5">
           <div className="w-1/2 flex justify-center pr-2">
-            <Avatar.Group>
-              {todos
-                .filter((todo) => todo.origin === "google")
-                .filter((todo) => {
-                  if (!uniqueGoogleEmails.has(todo.email)) {
-                    uniqueGoogleEmails.add(todo.email);
-                    return true;
+            {displayAs === 'avatar' ? (
+              <Avatar.Group>
+                {todos
+                  .filter((todo) => todo.origin === "google")
+                  .filter((todo) => {
+                    if (!uniqueGoogleEmails.has(todo.email)) {
+                      uniqueGoogleEmails.add(todo.email);
+                      return true;
+                    }
+                    return false;
+                  })
+                  .map((todo) => (
+                    <div key={todo.email} className="relative">
+                      <Tooltip
+                        content={<img width="30px" src={logoutIcon} onClick={() => handleLogout(todo.email)} />}
+                        className="rounded-full py-[5px] px-[7px]"
+                        style="light"
+                        trigger="click"
+                        arrow={true}
+                      >
+                        <Avatar
+                          key={todo.email}
+                          title={todo.email}
+                          img={todo.picture}
+                          onClick={() => handleAvatarClick(todo.email)}
+                          rounded
+                          bordered={selectedAvatar === todo.email}
+                          color={selectedAvatar === todo.email ? "pink" : ""}
+                          stacked
+                        />
+                      </Tooltip>
+                    </div>
+                  ))}
+                {Object.keys(emailCounts).map((email) => {
+                  if (emailCounts[email] > 3 && uniqueGoogleEmails.has(email)) {
+                    return <Avatar.Counter key={`counter-${email}`} total={emailCounts[email] - 3} href="#" />;
                   }
-                  return false;
-                })
-                .map((todo) => (
-                  <Avatar
-                    key={todo.email}
-                    title={todo.email}
-                    img={todo.picture}
-                    onClick={() => handleAvatarClick(todo.email)}
-                    rounded
-                    bordered={selectedAvatar === todo.email}
-                    color={selectedAvatar === todo.email ? "pink" : ""}
-                    stacked
-                  />
-                ))}
-              {Object.keys(emailCounts).map((email) => {
-                if (emailCounts[email] > 3 && uniqueGoogleEmails.has(email)) {
-                  return <Avatar.Counter key={`counter-${email}`} total={emailCounts[email] - 3} href="#" />;
-                }
-                return null;
-              })}
-            </Avatar.Group>
+                  return null;
+                })}
+              </Avatar.Group>
+            ) : (
+              <ListGroup className="w-full">
+                {todos
+                  .filter((todo) => todo.origin === "google")
+                  .filter((todo) => {
+                    if (!uniqueGoogleEmails.has(todo.email)) {
+                      uniqueGoogleEmails.add(todo.email);
+                      return true;
+                    }
+                    return false;
+                  })
+                  .map((todo) => (
+                    <div className="flex items-center justify-between mr-[5px]" key={todo.email}>
+                      <ListGroup.Item title={'Google: '+todo.email} onClick={() => handleAvatarClick(todo.email)}>
+                        <img width="30px" title={'Google: '+todo.email} src={todo.picture} />
+                        <span className="ms-3">{todo.name}</span>
+                      </ListGroup.Item>
+                      <img width="30px" className="ms-3" src={logoutIcon} onClick={() => handleLogout(todo.email)} />
+                    </div>
+                  ))}
+              </ListGroup>
+            )}
           </div>
           <div className="w-1/2 flex justify-center pl-2">
+          {displayAs === 'avatar' ? (
             <Avatar.Group>
               {todos
                 .filter((todo) => todo.origin === "microsoft")
@@ -500,16 +541,20 @@ export const SyncAcc = ({ isOpen, onClose, title, todos, logout }) => {
                   return false;
                 })
                 .map((todo) => (
-                  <Avatar
-                    key={todo.email}
-                    title={todo.email}
-                    img={todo.picture}
-                    onClick={() => handleAvatarClick(todo.email)}
-                    rounded
-                    bordered={selectedAvatar === todo.email}
-                    color={selectedAvatar === todo.email ? "pink" : ""}
-                    stacked
-                  />
+                  <div key={todo.email} className="relative">
+                    <Tooltip content={<img height="30px" width="50px" src={logoutIcon} onClick={() => handleLogout(todo.email)} />} className="rounded-full py-[5px] px-[7px]" style="light" trigger="click" arrow={true}>
+                      <Avatar
+                        key={todo.email}
+                        title={todo.email}
+                        img={todo.picture}
+                        onClick={() => handleAvatarClick(todo.email)}
+                        rounded
+                        bordered={selectedAvatar === todo.email}
+                        color={selectedAvatar === todo.email ? "pink" : ""}
+                        stacked
+                      />
+                    </Tooltip>
+                  </div>
                 ))}
               {Object.keys(emailCounts).map((email) => {
                 if (emailCounts[email] > 3 && uniqueMicrosoftEmails.has(email)) {
@@ -518,12 +563,29 @@ export const SyncAcc = ({ isOpen, onClose, title, todos, logout }) => {
                 return null;
               })}
             </Avatar.Group>
+          ):(
+            <ListGroup className="w-full">
+                {todos
+                  .filter((todo) => todo.origin === "microsoft")
+                  .filter((todo) => {
+                    if (!uniqueMicrosoftEmails.has(todo.email)) {
+                      uniqueMicrosoftEmails.add(todo.email);
+                      return true;
+                    }
+                    return false;
+                  })
+                  .map((todo) => (
+                    <div className="flex items-center justify-between mr-[5px]" key={todo.email}>
+                      <ListGroup.Item title={todo.email} onClick={() => handleAvatarClick(todo.email)}>
+                        <img width="30px" title={todo.email} src={todo.picture} />
+                        <span className="ms-3">{todo.name}</span>
+                      </ListGroup.Item>
+                      <img width="30px" className="ms-3" src={logoutIcon} onClick={() => handleLogout(todo.email)} />
+                    </div>
+                  ))}
+              </ListGroup>
+          )}
           </div>
-        </div>
-        <div className="flex justify-center pt-5">
-          <button className="btn px-2 text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700 flex items-center" onClick={handlelogout}>
-            <span className="ms-3 whitespace-nowrap">Logout selected account</span>
-          </button>
         </div>
       </div>
     </div>
