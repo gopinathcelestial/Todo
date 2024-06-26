@@ -13,26 +13,35 @@ const axios = require('axios');
 const crypto = require('crypto');
 const UserPhoto = require('./models/microsoftUserPhoto');
 const secretKey = crypto.randomBytes(32).toString('hex');
+const {rateLimit} = require('express-rate-limit')
+
 const app = express();
 const port = process.env.PORT || 3000;
+const limiter = rateLimit({
+	windowMs: 15 * 60 * 1000,
+	limit: 100,
+	standardHeaders: 'draft-7',
+	legacyHeaders: false,
+})
 
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI).then(() => console.log('Connected to MongoDB'))
     .catch(error => console.error('Failed to connect to MongoDB:', error));
 
-app.use(session({
-    secret: secretKey,
-    resave: false,
-    saveUninitialized: true,
-    store: MongoStore.create({ mongoUrl: process.env.MONGO_URI })
-}));
-
-app.use(express.json());
-app.use(cookieParser());
-app.use(cors({
-    origin: "http://localhost:5173",
-    credentials: true,
-}));
+    app.use(session({
+        secret: secretKey,
+        resave: false,
+        saveUninitialized: true,
+        store: MongoStore.create({ mongoUrl: process.env.MONGO_URI })
+    }));
+    
+    app.use(express.json());
+    app.use(cookieParser());
+    app.use(cors({
+        origin: "http://localhost:5173",
+        credentials: true,
+    }));
+    app.use(limiter)
 
 const googleOAuth2Client = new google.auth.OAuth2(
     process.env.CLIENT_ID,

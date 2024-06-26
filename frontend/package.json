@@ -17,6 +17,7 @@
     "@fullcalendar/daygrid": "^6.1.11",
     "@fullcalendar/interaction": "^6.1.11",
     "@fullcalendar/react": "^6.1.11",
+    "@fullcalendar/timegrid": "^6.1.14",
     "axios": "^1.6.8",
     "extendable-media-recorder": "^9.2.4",
     "flowbite": "^2.3.0",
