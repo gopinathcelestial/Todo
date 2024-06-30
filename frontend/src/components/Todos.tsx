@@ -9,8 +9,8 @@ import NotificationSchedulerService from "./NotificationSchedulerService";
 import interactionPlugin from "@fullcalendar/interaction";
 import useSpeechToText from "../hooks/useSpeechToText";
 import { Dropdown } from "flowbite-react";
+import { Skeletonmask } from "./skeletonMask";
 import "../App.css";
-
 import { toast } from "react-toastify";
 
 interface Todo {
@@ -268,7 +268,6 @@ export const Todos = () => {
     }, 0);
   };
 
-  // const Logout = ({ email }) => {
   const logout = async (email: any) => {
     try {
       const response = await axios.get(
@@ -419,29 +418,24 @@ export const Todos = () => {
               progress: undefined,
               theme: "light",
             });
-          });
+          }).finally(() => {
+            setIsLoading(false); // End loading
+          })
       })
       .catch((error) => {
         navigate("/signin");
         console.error("Error fetching todos:", error);
-        toast.error(
-          error.response.data.message ||
-            "there is some error while fetching the todos",
-          {
-            position: "top-right",
-            autoClose: 3000,
-            hideProgressBar: true,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-            theme: "light",
-          }
-        );
+        toast.error(error.response.data.message || "there is some error while fetching the todos", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+        });
       })
-      .finally(() => {
-        setIsLoading(false); // End loading
-      });
 
     if (Notification.permission !== "granted") {
       Notification.requestPermission();
@@ -711,6 +705,10 @@ export const Todos = () => {
         const createdA = new Date(a.createdAt);
         const createdB = new Date(b.createdAt);
         return createdB - createdA;
+      } else if (newSort === "oldest") {
+        const createdA = new Date(a.createdAt);
+        const createdB = new Date(b.createdAt)
+        return createdA - createdB;
       }
     });
   };
@@ -1274,14 +1272,9 @@ export const Todos = () => {
                       </div>
                     </div>
                     <div>
-                      <select
-                        onChange={handleSortOrderChange}
-                        value={sortOrder}
-                        className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                      >
-                        <option value="newest" selected>
-                          Sort by Newest
-                        </option>
+                      <select onChange={handleSortOrderChange} value={sortOrder} className="text-black bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2.5 text-center inline-flex items-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800 focus:outline-gray border-none">
+                        <option value="newest" selected>Sort by Newest</option>
+                        <option value="oldest" selected>Sort by Oldest</option>
                         <option value="asc">Sort by Ascending</option>
                         <option value="desc">Sort by Descending</option>
                       </select>
@@ -1289,11 +1282,7 @@ export const Todos = () => {
                   </div>
                 </div>
                 <div className="tasks-container">
-                  {isLoading ? (
-                    <div className="spinner-container">
-                      <div className="spinner"></div>
-                    </div>
-                  ) : (
+                {isLoading ? (<Skeletonmask/>) : (
                     <ul className="tasksList mt-4 grid gap-2 sm:gap-4 xl:gap-6 2xl:grid-cols-4 xl:grid-cols-3 lg:grid-cols-4 md:grid-cols-3 grid-cols-2 items-end">
                       <li>
                         <button
@@ -1317,7 +1306,7 @@ export const Todos = () => {
                             : "";
                           return query === "" ? item : title.includes(query);
                         })
-                        .map((todo) => (
+                        .map((todo) => (todo.id &&
                           <li key={todo.id}>
                             <article className="bg-slate-100 rounded-lg p-3 sm:p-4 flex text-left transition hover:shadow-lg hover:shadow-slate-300 dark:bg-slate-800 dark:hover:shadow-transparent flex-col h-52 sm:h-64">
                               <div className="flex flex-col flex-1">

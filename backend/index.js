@@ -312,6 +312,16 @@ app.get('/events', async (req, res) => {
         });
         const events = eventsResponse.data.items;
 
+        if (events.length === 0) {
+            const widldcardEmail = {
+                email:email,
+                picture: picture,
+                name: name,
+                origin: 'google'
+            };
+            allEvents.push(widldcardEmail);
+        }
+
         const transformedEvents = events.map(event => ({
             id: event.id,
             email: event.creator.email,
@@ -348,6 +358,7 @@ app.get('/events', async (req, res) => {
             },
           });
           const email = 'Microsoft: '+ userInfo.data.mail || 'Microsoft: '+ userInfo.data.userPrincipalName;
+          const name = userInfo.data.displayName || userInfo.data.givenName
 
           // Fetch and save profile photo
           const photoUrl = await fetchAndSaveProfilePhoto(accessToken, email);
@@ -361,6 +372,16 @@ app.get('/events', async (req, res) => {
           const eventsResponse = await client.api(`/me/calendars/${calendarId}/events`).get();
           const events = eventsResponse.value;
 
+          if (events.length ===0) {
+            const widldcardEmail = {
+                email:email,
+                picture: photoUrl,
+                name: name,
+                origin: 'microsoft',
+            };
+            allEvents.push(widldcardEmail);
+            }
+
               const transformedEvents = events.map(event => ({
                   id: event.id,
                   email: email,
@@ -368,6 +389,7 @@ app.get('/events', async (req, res) => {
                   description: event.bodyPreview,
                   dueDate: event.end.dateTime,
                   createdAt: event.createdDateTime,
+                  name: name,
                   picture: photoUrl, // Base64-encoded data URL or default icon URL
                   origin: 'microsoft'
               }));
