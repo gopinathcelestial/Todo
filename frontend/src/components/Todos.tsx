@@ -34,7 +34,6 @@ export const Todos = () => {
   const [modalTitle, setModalTitle] = useState("");
   const [SyncTitle, setSyncTitle] = useState("");
   const [modalTaskData, setModalTaskData] = useState<Todo | null>(null);
-  const [completedTodos, setCompletedTodos] = useState<Todo[]>([]);
   const [allTasksCount, setAllTasksCount] = useState(0);
   const [completedTasksCount, setCompletedTasksCount] = useState(0);
   const [title, settitle] = useState("All Tasks");
@@ -126,6 +125,25 @@ export const Todos = () => {
     const uniqueEmails = [...new Set(todos.map((task) => task.email))];
     setEmailOptions(uniqueEmails);
   }, [todos]);
+
+  useEffect(() => {
+    const eventSource = new EventSource('http://localhost:3000/api/v1/sseevents');
+    eventSource.onmessage = (event) => {
+      const newMessage = JSON.parse(event.data);
+      console.log('New message from server:', newMessage);
+      setTimeout(() => {   
+        const notification = new Notification(newMessage.message);
+        setTimeout(() => {
+          notification.close()
+        }, 5000);
+      }, 0);
+      toast.info(newMessage.message);
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, []);
 
   const stopVoiceInput = async (e: any) => {
     try {
@@ -652,11 +670,6 @@ export const Todos = () => {
     settitle("All Tasks");
     const sortedTodos = sortTodos(todos, "newest");
     setFilteredTodos(sortedTodos);
-  };
-  const handleCompletedTasksClick = () => {
-    settitle("Completed tasks");
-    setTodos(completedTodos);
-    setModalTitle("Completed tasks");
   };
 
   const handleCalendarViewClick = () => {
