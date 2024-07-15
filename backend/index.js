@@ -14,6 +14,8 @@ const crypto = require('crypto');
 const UserPhoto = require('./models/microsoftUserPhoto');
 const secretKey = crypto.randomBytes(32).toString('hex');
 const {rateLimit} = require('express-rate-limit')
+const todoNotifier = require('./middlewares/eventScheduler');
+
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -23,6 +25,7 @@ const limiter = rateLimit({
 	standardHeaders: 'draft-7',
 	legacyHeaders: false,
 })
+todoNotifier.setupSSERoute(app);
 
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI).then(() => console.log('Connected to MongoDB'))
@@ -335,6 +338,8 @@ app.get('/events', async (req, res) => {
             origin: 'google'
         }));
         allEvents.push(...transformedEvents);
+        process.nextTick(() => todoNotifier.scheduleTodoNotification(allEvents));
+
           // }
     } catch (err) {
         console.error('Error fetching Google events', err);

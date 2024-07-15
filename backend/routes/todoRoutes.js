@@ -2,50 +2,17 @@ const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middlewares/auth');
 const Todo = require('../models/todo');
-const schedule = require('node-schedule');
-var cron = require('node-cron');
-
-function scheduleTodoNotification(res, todo) {
-    let cronExpression = new Date(2024, 6, 28, 12, 20, 0);
-    const rule = new schedule.RecurrenceRule();
-    rule.dayOfWeek = [0, new schedule.Range(4, 6)];
-    rule.hour = 11;
-    rule.minute = 54;
-
-    const job = cron.schedule(cronExpression, async function () {
-        console.log('Testing todo')
-        res.write(`data: ${JSON.stringify({ message: 'Testing Todo' })}\n\n`);
-    });
-}
-
-let todosLocal = []
-
-router.get('/sseevents', (req, res) => {
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
+const todoNotifier = require('../middlewares/eventScheduler');
 
 
-    res.write(`data: ${JSON.stringify({ message: 'Hello from server!' })}\n\n`);
-    // setInterval(() => {
-    //     if(todosLocal.length>0){
-            scheduleTodoNotification(res)
-    //     }
-    // }, 2000);
-
-    req.on('close', () => {
-        res.end();
-    });
-});
+todoNotifier.setupSSERoute(router);
 
 router.get('/todos', verifyToken, async (req, res) => {
     try {
         const userEmail = req.user.email;
         const todos = await Todo.find({ userEmail });
-        // todosLocal = todos
         res.json(todos);
+        process.nextTick(() => todoNotifier.scheduleTodoNotification(todos));
 
     } catch (error) {
         res.status(500).json({ error: error.message });
