@@ -26,6 +26,8 @@ const limiter = rateLimit({
 	legacyHeaders: false,
 })
 todoNotifier.setupSSERoute(app);
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI).then(() => console.log('Connected to MongoDB'))
