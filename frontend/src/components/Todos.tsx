@@ -8,10 +8,11 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import NotificationSchedulerService from "./NotificationSchedulerService";
 import interactionPlugin from "@fullcalendar/interaction";
 import useSpeechToText from "../hooks/useSpeechToText";
-import { Dropdown } from "flowbite-react";
+import { Dropdown, Avatar, Button,TextInput,Label } from "flowbite-react";
 import { Skeletonmask } from "./skeletonMask";
 import "../App.css";
 import { toast } from "react-toastify";
+import {constants} from "./AllSVG";
 
 interface Todo {
   id: number;
@@ -53,69 +54,22 @@ export const Todos = () => {
   const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
   const [emailOptions, setEmailOptions] = useState<string[]>([]);
   const [filterByEmail, setFilterByEmail] = useState(false);
+  const [viewOption, setViewOption] = useState('XL');
+  const [viewProp, setViewProp] = useState('grid-cols-1');
+  const [viewIcon, setViewIcon] = useState(constants.singleCol);
+  const [translate, setTranslate] = useState('sm:translate-x-[-14rem]');
+  const [margin, setMargin] = useState('ml-8');
+  const [isNavOpen, setIsNavOpen] = useState(false);
+  const [toggleNav, setToggleNav] = useState(constants.ArrowForward);
+  const [showView, setShowView] = useState("task");
+  const [Fname, setFname] = useState('');
+  const [Lname, setLname] = useState('');
+  const [userInfo, setUserInfo] = useState<any[]>([]);
+  const [profileImgPreview, setProfileImgPreview] = useState(constants.defaultUser);
 
   const navigate = useNavigate();
-  const googleIcon = (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      x="0px"
-      y="0px"
-      width="20"
-      height="20"
-      viewBox="0 0 48 48"
-    >
-      <path
-        fill="#FFC107"
-        d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"
-      ></path>
-      <path
-        fill="#FF3D00"
-        d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"
-      ></path>
-      <path
-        fill="#4CAF50"
-        d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"
-      ></path>
-      <path
-        fill="#1976D2"
-        d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"
-      ></path>
-    </svg>
-  );
-  const microsoftIcon = (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      x="0px"
-      y="0px"
-      width="20"
-      height="20"
-      viewBox="0 0 48 48"
-    >
-      <path
-        fill="#ff5722"
-        d="M6 6H22V22H6z"
-        transform="rotate(-180 14 14)"
-      ></path>
-      <path
-        fill="#4caf50"
-        d="M26 6H42V22H26z"
-        transform="rotate(-180 34 14)"
-      ></path>
-      <path
-        fill="#ffc107"
-        d="M26 26H42V42H26z"
-        transform="rotate(-180 34 34)"
-      ></path>
-      <path
-        fill="#03a9f4"
-        d="M6 26H22V42H6z"
-        transform="rotate(-180 14 34)"
-      ></path>
-    </svg>
-  );
-  const defaultUser = `https://cdn-icons-png.flaticon.com/512/149/149071.png`;
   const { isListening, transcript, startListening, stopListening } =
-    useSpeechToText({ continuous: true });
+  useSpeechToText({ continuous: true });
   const startStopListening = (e: any) => {
     e.preventDefault();
     document.getElementById("titleInput")?.focus();
@@ -299,7 +253,7 @@ export const Todos = () => {
         });
       }
     } catch (error) {
-      toast.error("'An error occurred during logout", {
+      toast.error("An error occurred during logout", {
         position: "top-right",
         autoClose: 3000,
         hideProgressBar: true,
@@ -313,6 +267,7 @@ export const Todos = () => {
   };
   const fetchTodos = async () => {
     setIsLoading(true);
+    userDetails();
     const notificationSchedulerService = NotificationSchedulerService();
 
     // Fetch Todos from your DB
@@ -326,7 +281,7 @@ export const Todos = () => {
       .then((response) => {
         const allTodos = response.data;
 
-        // Fetch events from Google Calendar
+        // Fetch events from Google and microsoft Calendar
         axios
           .get("http://localhost:3000/events", {
             withCredentials: true,
@@ -497,6 +452,7 @@ export const Todos = () => {
   useEffect(() => {
     fetchTodos();
     handleLoginResponse();
+    userDetails();
   }, []);
 
   const handleSignOut = async () => {
@@ -664,6 +620,7 @@ export const Todos = () => {
     settitle("All Tasks");
     const sortedTodos = sortTodos(todos, "newest");
     setFilteredTodos(sortedTodos);
+    setShowView('task');
   };
 
   const handleCalendarViewClick = () => {
@@ -678,6 +635,7 @@ export const Todos = () => {
     setCalendarEvents(updatedCalendarEvents);
     setShowCalendar(true);
     settitle("Calendar View");
+    setShowView('calendar');
   };
 
   const handleSortOrderChange = (event: any) => {
@@ -812,6 +770,142 @@ export const Todos = () => {
     fetchTodos(); // Optionally refetch todos to reset the list
   };
 
+ const handleViewsClick = () =>{
+  if (viewOption === 'List') {
+    setViewProp("grid-cols-1");
+    setViewOption('XL');
+    setViewIcon(constants.singleCol);
+  }else if(viewOption === 'XL'){
+    setViewProp("grid-cols-2");
+    setViewOption('L');
+    setViewIcon(constants.twoCol);
+  }else if(viewOption === 'L'){
+    setViewProp("grid-cols-3");
+    setViewOption('M');
+    setViewIcon(constants.threeCol);
+  }else if(viewOption === 'M'){
+    setViewProp("grid-cols-4");
+    setViewOption('S');
+    setViewIcon(constants.fourCol);
+  }else if(viewOption === 'S'){
+    setViewProp("grid-cols-5");
+    setViewOption('XS');
+    setViewIcon(constants.fiveCol);
+  }else if(viewOption === 'XS'){
+    setViewProp("grid-cols-6");
+    setViewOption('List');
+    setViewIcon(constants.sixCol);
+  }
+ };
+
+ const handleToggle = () => {
+  if (isNavOpen) {
+    setTranslate('sm:translate-x-[-14rem]');
+    setIsNavOpen(false);
+    setToggleNav(constants.ArrowForward);
+    setMargin('ml-8');
+  }else{
+    setTranslate('sm:translate-x-0');
+    setIsNavOpen(true);
+    setToggleNav(constants.ArrowBackward);
+    setMargin('ml-64');
+  }
+ };
+
+ const handleSettings = () =>{
+   setShowView('settings');
+ };
+
+ const handleImageChange = (e) => {
+   const file = e.target.files[0];
+
+   const reader = new FileReader();
+   reader.onloadend = () => {
+     setProfileImgPreview(reader.result);
+   };
+   if (file) {
+     reader.readAsDataURL(file);
+   }
+ };
+
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  const userData = {
+    Fname,
+    Lname,
+    profileImg:profileImgPreview,
+  };
+
+  try {
+    const response = await axios.put(
+      'http://localhost:3000/auth/user',
+      userData,
+      {
+        withCredentials: true,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+        }
+      }
+    );
+    if (response.status === 200) {
+      toast.success('User updated successfully', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: true,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+      });
+      userDetails();
+    } else {
+      toast.error("There is some error while updating user info, please try again", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: true,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error updating user:', error);
+    toast.error("Error updating user", {
+      position: "top-right",
+      autoClose: 3000,
+      hideProgressBar: true,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      theme: "light",
+    });
+  }
+};
+
+const userDetails = async () => {
+  const response = await axios.get(
+    `http://localhost:3000/auth/user`,
+    { withCredentials: true }
+  );
+
+  const userDetail = {
+    email: response.data.email,
+    fname: response.data.Fname,
+    lname: response.data.Lname,
+    profileImg: response.data.profileImg
+  };
+
+  setProfileImgPreview(userDetail.profileImg);
+  setUserInfo(userDetail);
+  console.log(userDetail);
+
+}
   return (
     <>
       <nav className="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700 flex items-center justify-between px-3 py-3 lg:px-5">
@@ -874,21 +968,23 @@ export const Todos = () => {
             </svg>
           </div>
         </div>
-
-        <button
-          type="button"
-          className="text-sm text-gray-500 ml-auto mr-3 md:mr-0 hover:text-gray-700 focus:outline-none"
-          onClick={handleSignOut}
-        >
-          Sign Out
-        </button>
+        <Dropdown label={<img className="w-8 h-8 rounded-full" src={userInfo.profileImg}/>} arrowIcon={false} inline>
+          <Dropdown.Header>
+            <span className="block text-sm">{userInfo.fname} {userInfo.lname}</span>
+            <span className="block truncate text-sm font-medium">{userInfo.email}</span>
+          </Dropdown.Header>
+          <Dropdown.Item onClick={handleSettings}>Settings</Dropdown.Item>
+          <Dropdown.Divider />
+          <Dropdown.Item onClick={handleSignOut}>Sign out</Dropdown.Item>
+        </Dropdown>
       </nav>
 
       <aside
         id="logo-sidebar"
-        className="fixed top-0 left-0 z-40 w-64 h-screen pt-20 transition-transform -translate-x-full bg-white border-r border-gray-200 sm:translate-x-0 dark:bg-gray-800 dark:border-gray-700"
+        className={`fixed top-0 left-0 z-40 w-64 h-screen pt-20 transition-transform  bg-white border-r border-gray-200 ${translate} dark:bg-gray-800 dark:border-gray-700`}
         aria-label="Sidebar"
       >
+        <button className="float-right mt-3" onClick={handleToggle}>{toggleNav}</button>
         <div className="h-[450pt] px-3 pb-4 overflow-y-auto bg-white dark:bg-gray-800">
           <ul className="space-y-2 font-medium">
             <li>
@@ -1012,8 +1108,8 @@ export const Todos = () => {
         </div>
       </aside>
 
-      <div className="p-4 pt-7 sm:ml-64">
-        <div className="p-4 border-2 border-gray-200 border-dashed rounded-lg dark:border-gray-700 mt-14">
+      <div className="p-4 pt-7">
+        <div className={`p-4 border-2 border-gray-200 border-dashed rounded-lg dark:border-gray-700 mt-14 ${margin}`}>
           <Model
             isOpen={isModalOpen}
             onClose={() => setIsModalOpen(false)}
@@ -1034,9 +1130,10 @@ export const Todos = () => {
             onClose={() => setIsSyncOpen(false)}
             todos={todos}
             logout={logout}
+            emailOptions={emailOptions}
           />
           <section>
-            {showCalendar ? (
+            {showView ==='calendar' && (
               <>
                 <h1 className="font-medium my-5 text-center sm:text-left sm:my-8 md:text-2xl text-lg dark:text-slate-200">
                   {title}
@@ -1058,7 +1155,7 @@ export const Todos = () => {
                   select={handleDateSelect}
                 />
               </>
-            ) : (
+            )}{showView ==='task' && (
               <>
                 <div className="flex w-full items-center justify-between">
                   <h1 className="font-medium my-5 pl-1 text-center sm:text-left sm:my-8 md:text-2xl text-lg dark:text-slate-200 flex items-center">
@@ -1273,17 +1370,18 @@ export const Todos = () => {
                     </div>
                     <div>
                       <select onChange={handleSortOrderChange} value={sortOrder} className="text-black bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2.5 text-center inline-flex items-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800 focus:outline-gray border-none">
-                        <option value="newest" selected>Sort by Newest</option>
-                        <option value="oldest" selected>Sort by Oldest</option>
+                        <option value="newest">Sort by Newest</option>
+                        <option value="oldest">Sort by Oldest</option>
                         <option value="asc">Sort by Ascending</option>
                         <option value="desc">Sort by Descending</option>
                       </select>
                     </div>
+                    <button onClick={()=>handleViewsClick()}>{viewIcon}</button>
                   </div>
                 </div>
                 <div className="tasks-container">
-                {isLoading ? (<Skeletonmask/>) : (
-                    <ul className="tasksList mt-4 grid gap-2 sm:gap-4 xl:gap-6 2xl:grid-cols-4 xl:grid-cols-3 lg:grid-cols-4 md:grid-cols-3 grid-cols-2 items-end">
+                {isLoading ? (<Skeletonmask viewprop={viewProp}/>) : (
+                    <ul className={`tasksList mt-4 grid gap-2 sm:gap-4 xl:gap-6 ${viewProp} items-end`}>
                       <li>
                         <button
                           className="border-2 border-slate-300 text-slate-400 w-full rounded-lg border-dashed transition hover:bg-slate-300 hover:text-slate-500 dark:border-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-300 h-52 sm:h-64"
@@ -1390,7 +1488,7 @@ export const Todos = () => {
                                     </span>
                                   </button>
                                 )}
-                                <div className="flex items-center">
+                                <div className="flex items-center flex-none">
                                   <div className="relative group">
                                     {todo.email ? (
                                       <Dropdown
@@ -1403,19 +1501,19 @@ export const Todos = () => {
                                               src={
                                                 todo.picture
                                                   ? todo.picture
-                                                  : defaultUser
+                                                  : constants.defaultUser
                                               }
                                               title={todo.email}
                                               alt={todo.name}
                                             />
                                             {todo.origin && (
                                               <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <span className="text-white">
+                                                <span title={todo.email} className="text-white">
                                                   {(todo.origin === "google" &&
-                                                    googleIcon) ||
+                                                    constants.googleIcon) ||
                                                     (todo.origin ===
                                                       "microsoft" &&
-                                                      microsoftIcon)}
+                                                      constants.microsoftIcon)}
                                                 </span>
                                               </div>
                                             )}
@@ -1432,15 +1530,15 @@ export const Todos = () => {
                                       <div className="relative">
                                         <img
                                           className="w-8 h-8 rounded-full"
-                                          src={defaultUser}
+                                          src={constants.defaultUser}
                                         />
                                         {todo.origin && (
                                           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                                             <span className="text-white">
                                               {(todo.origin === "google" &&
-                                                googleIcon) ||
+                                                constants.googleIcon) ||
                                                 (todo.origin === "microsoft" &&
-                                                  microsoftIcon)}
+                                                  constants.microsoftIcon)}
                                             </span>
                                           </div>
                                         )}
@@ -1486,6 +1584,31 @@ export const Todos = () => {
                     </ul>
                   )}
                 </div>
+              </>
+            )}{showView ==='settings' && (
+              <>
+                <h1 className="font-medium my-5 text-center sm:text-left sm:my-8 md:text-2xl text-lg dark:text-slate-200">
+                  Settings
+                </h1>
+                <form className="flex items-center flex-col" onSubmit={handleSubmit}>
+                  <div className="flex items-center flex-col gap-2">
+                    <Avatar img={profileImgPreview} size="xl" />
+                    <input type="file" id="profileImg" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
+                    <Button color="light" pill onClick={() => document.getElementById('profileImg').click()}>Edit</Button>
+                  </div>
+                  <div className="w-2/4 gap-6 flex flex-col">
+                  <div>
+                    <Label htmlFor="Fname" value="First Name" />
+                    <TextInput type="text" placeholder="First Name" value={userInfo.fname|| Fname} onChange={(e) => setFname(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label htmlFor="Lname" value="Last Name" />
+                    <TextInput type="text" placeholder="Last Name" value={userInfo.lname||Lname} onChange={(e) => setLname(e.target.value)} />
+                  </div>
+                  <Button type="submit" color="success" pill>Send</Button>
+                  <Button onClick={userDetails} color="dark" pill>Get Details</Button>
+                  </div>
+                </form>
               </>
             )}
           </section>

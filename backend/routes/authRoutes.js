@@ -11,6 +11,12 @@ const signupSchema = z.object({
     password: z.string().min(6),
   });
 
+const updateSchema = z.object({
+    Fname: z.string().optional(),
+    Lname: z.string().optional(),
+    profileImg: z.string().optional(), // Assuming the image is sent as a base64 encoded string
+});
+
 router.post('/signup', async (req, res) => {
     try {
         const { email, password } = signupSchema.parse(req.body);
@@ -60,6 +66,45 @@ router.get('/isloggedin', verifyToken, (req, res) => {
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
-  });
+});
+
+router.get('/user', verifyToken, async (req, res) => {
+    try {
+        const user = await User.findOne({ email: req.user.email }).select('-password');
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.status(200).json(user);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.put('/user', verifyToken, async (req, res) => {
+
+    try {
+        const { Fname, Lname, profileImg } = updateSchema.parse(req.body);
+
+        let updateData = {};
+        if (Fname) updateData.Fname = Fname;
+        if (Lname) updateData.Lname = Lname;
+        if (profileImg) updateData.profileImg = profileImg;
+        
+
+        const updatedUser = await User.findOneAndUpdate(
+            { email: req.user.email },
+            {Fname:Fname, Lname:Lname, profileImg:profileImg},
+            { upsert: true }
+        ).select('-password');
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.status(200).json(updatedUser);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 module.exports = router;

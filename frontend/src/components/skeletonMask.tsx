@@ -1,9 +1,9 @@
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 
-export const Skeletonmask = () => {
+export const Skeletonmask = (viewProp) => {
     return(
-    <ul className="tasksList mt-4 grid gap-2 sm:gap-4 xl:gap-6 2xl:grid-cols-4 xl:grid-cols-3 lg:grid-cols-4 md:grid-cols-3 grid-cols-2 items-end">
+    <ul className={`tasksList mt-4 grid gap-2 sm:gap-4 xl:gap-6 ${viewProp.viewprop} items-end`}>
         {[...Array(10)].map((_, index) => (
           <li key={index}>
             <article className="bg-slate-100 rounded-lg p-3 sm:p-4 flex text-left transition hover:shadow-lg hover:shadow-slate-300 dark:bg-slate-800 dark:hover:shadow-transparent flex-col h-52 sm:h-64">

@@ -364,7 +364,7 @@ export const Model = ({
   );
 };
 
-export const SyncAcc = ({ isOpen, onClose, title, todos, logout }) => {
+export const SyncAcc = ({ isOpen, onClose, title, todos, logout, emailOptions }) => {
   const uniqueGoogleEmails = new Set();
   const uniqueMicrosoftEmails = new Set();
   const [selectedAvatar, setSelectedAvatar] = useState(null);
@@ -462,7 +462,7 @@ export const SyncAcc = ({ isOpen, onClose, title, todos, logout }) => {
             </button>
           </div>
         </div>
-        <div className="flex items-center justify-between mr-[5px]"> Already logged in accounts <span title={displayAs === 'avatar'? 'View as List': 'View as Stacked'} onClick={()=>{displayAccountAs()}}>{displayAs === 'avatar'? stackedIcon: listIcon}</span></div>
+        {(emailOptions.length >1)? <div className="flex items-center justify-between mr-[5px]"> Already logged in accounts <span title={displayAs === 'avatar'? 'View as List': 'View as Stacked'} onClick={()=>{displayAccountAs()}}>{displayAs === 'avatar'? stackedIcon: listIcon}</span></div>:''}    
         <div className="flex justify-center pt-5">
           <div className="w-1/2 flex justify-center pr-2">
             {displayAs === 'avatar' ? (
