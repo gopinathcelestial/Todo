@@ -68,21 +68,31 @@ export const Todos = () => {
   const [profileImgPreview, setProfileImgPreview] = useState(constants.defaultUser);
   const [theme,setTheme] = useState(false);
   const [themeClass, setThemeClass] = useState('themeLight');
+  const [isDropdownVisible, setDropdownVisible] = useState(false);
 
   const navigate = useNavigate();
+  
+  //useSpeechToText  is designed to handle speech-to-text conversion. It likely interfaces with the Web Speech API or
+  // another speech recognition service to convert spoken language into text.
   const { isListening, transcript, startListening, stopListening } =
   useSpeechToText({ continuous: true });
+
+  //This function toggles the speech-to-text functionality based on its current state (isListening)
   const startStopListening = (e: any) => {
     e.preventDefault();
     document.getElementById("titleInput")?.focus();
     isListening ? stopVoiceInput(e) : startListening();
   };
-  useEffect(() => {
-    const uniqueEmails = [...new Set(todos.map((task) => task.email))];
-    setEmailOptions(uniqueEmails);
-  }, [todos]);
 
   useEffect(() => {
+    const uniqueEmails = [...new Set(todos.map((task) => task.email))]; //gives an email array removing duplicate mails
+    setEmailOptions(uniqueEmails);
+  }, [todos]); //The dependency array [todos] tells React to re-run the effect whenever the todos state changes.
+
+  useEffect(() => {
+    //sets up a connection to a server-sent events (SSE) endpoint
+    //This establishes a persistent connection to the server, allowing 
+    //the server to push updates to the client in real-time.
     const eventSource = new EventSource('http://localhost:3000/api/v1/sseevents');
     eventSource.onmessage = (event) => {
       const newMessage = JSON.parse(event.data);
@@ -924,6 +934,9 @@ const toggleDarkMode = () => {
     setThemeClass('themeBlack');
   }
 }
+const toggleDropdown = () => {
+  setDropdownVisible(!isDropdownVisible);
+};
   return (
     <>
       <nav className="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700 flex items-center justify-between px-3 py-3 lg:px-5">
@@ -1187,6 +1200,8 @@ const toggleDarkMode = () => {
                     <div className="flex items-center justify-center p-4">
                       <button
                         id="dropdownDefault"
+                        onClick={toggleDropdown}
+
                         data-dropdown-toggle="dropdown"
                         className="bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2.5 text-center inline-flex items-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
                         type="button"
@@ -1211,7 +1226,7 @@ const toggleDarkMode = () => {
 
                       <div
                         id="dropdown"
-                        className="z-10 hidden w-64 p-4 bg-white rounded-lg shadow dark:bg-gray-700"
+                        className={`z-10 ${isDropdownVisible ? '' : 'hidden'} w-64 p-4 bg-white rounded-lg shadow dark:bg-gray-700`}
                       >
                         <div className="flex justify-between items-center">
                           <h6 className="mb-3 text-sm font-medium text-gray-900 dark:text-white">

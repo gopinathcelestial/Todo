@@ -55,6 +55,7 @@ body {
 .themeBlack {
   background-color: black !important; /* Example dark background */
   color: whitesmoke !important;
+  height: 100vh;
 }
 
 .themeLight {
