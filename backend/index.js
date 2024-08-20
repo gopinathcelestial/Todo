@@ -69,6 +69,8 @@ const microsoftOAuth2Client = new AuthorizationCode({
 // Routes
 app.use('/auth', require('./routes/authRoutes'));
 app.use('/api/v1', require('./routes/todoRoutes'));
+app.use('/api/v1/friends', require('./routes/friendRoutes'));
+
 
 // Google Calendar Routes
 app.get('/googlelogin', (req, res) => {

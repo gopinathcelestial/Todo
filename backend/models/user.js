@@ -6,7 +6,10 @@ const userSchema = new mongoose.Schema({
     Fname: String,
     Lname: String,
     profileImg: { type: String}
-
+,
+    friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    friendRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    sharedTodos: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Todo' }]
 });
 
 module.exports = mongoose.model('User', userSchema);

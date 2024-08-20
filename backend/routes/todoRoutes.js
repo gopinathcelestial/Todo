@@ -3,6 +3,8 @@ const router = express.Router();
 const { verifyToken } = require('../middlewares/auth');
 const Todo = require('../models/todo');
 const todoNotifier = require('../middlewares/eventScheduler');
+const User = require('../models/user');
+
 
 
 todoNotifier.setupSSERoute(router);
@@ -90,5 +92,15 @@ router.put('/todos/:id', verifyToken, (req, res) => {
         })
         .catch(err => res.status(500).send(err.toString()));
 });
+
+router.get('/shared-todos', verifyToken, async (req, res) => {
+    try {
+        const user = await User.findOne({ email: req.user.email }).populate('sharedTodos');
+        res.json(user.sharedTodos);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 
 module.exports = router;
