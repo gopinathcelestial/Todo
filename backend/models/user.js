@@ -6,6 +6,7 @@ const userSchema = new mongoose.Schema({
     Fname: String,
     Lname: String,
     profileImg: String,
+    mobileNumber: { type: String, maxLength: 10 },
     friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     friendRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     sharedTodos: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Todo' }]

@@ -14,6 +14,7 @@ const signupSchema = z.object({
 const updateSchema = z.object({
     Fname: z.string().optional(),
     Lname: z.string().optional(),
+    mobileNumber:z.string().max(10),
     profileImg: z.string().optional(), // Assuming the image is sent as a base64 encoded string
 });
 
@@ -97,7 +98,7 @@ router.get('/user/:id', verifyToken, async (req, res) => {
 
 router.put('/user', verifyToken, async (req, res) => {
     try {
-      const { Fname, Lname, profileImg, currentpass, newPass } = req.body;
+      const { Fname, Lname, profileImg, currentpass, newPass, mobileNumber } = req.body;
       const email = req.user.email;
   
       const user = await User.findOne({ email });
@@ -113,6 +114,7 @@ router.put('/user', verifyToken, async (req, res) => {
         let updateData = {};
         if (Fname) updateData.Fname = Fname;
         if (Lname) updateData.Lname = Lname;
+        if (mobileNumber) updateData.mobileNumber = mobileNumber;
         if (profileImg) updateData.profileImg = profileImg;
         if (newPass) {
             const hashedPassword = await bcrypt.hash(newPass, 10);

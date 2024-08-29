@@ -28,6 +28,7 @@ interface Todo {
   name: string;
   email: string;
   origin: string;
+  mobileNumber:number;
 }
 
 interface FriendRequest {
