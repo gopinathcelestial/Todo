@@ -462,7 +462,7 @@ export const SyncAcc = ({ isOpen, onClose, title, todos, logout, emailOptions })
             </button>
           </div>
         </div>
-        {(emailOptions.length >1)? <div className="flex items-center justify-between mr-[5px]"> Already logged in accounts <span title={displayAs === 'avatar'? 'View as List': 'View as Stacked'} onClick={()=>{displayAccountAs()}}>{displayAs === 'avatar'? stackedIcon: listIcon}</span></div>:''}    
+        {(emailOptions.length >1)? <div className="flex items-center justify-between mr-[5px]"> Already logged in accounts <span className="bg-slate-200" title={displayAs === 'avatar'? 'View as List': 'View as Stacked'} onClick={()=>{displayAccountAs()}}>{displayAs === 'avatar'? stackedIcon: listIcon}</span></div>:''}    
         <div className="flex justify-center pt-5">
           <div className="w-1/2 flex justify-center pr-2">
             {displayAs === 'avatar' ? (
@@ -522,7 +522,7 @@ export const SyncAcc = ({ isOpen, onClose, title, todos, logout, emailOptions })
                         <img width="30px" title={'Google: '+todo.email} src={todo.picture} />
                         <span className="ms-3">{todo.name}</span>
                       </ListGroup.Item>
-                      <img width="30px" className="ms-3" src={logoutIcon} onClick={() => handleLogout(todo.email)} />
+                      <img width="30px" className="ms-3 rounded-full" src={logoutIcon} onClick={() => handleLogout(todo.email)} />
                     </div>
                   ))}
               </ListGroup>

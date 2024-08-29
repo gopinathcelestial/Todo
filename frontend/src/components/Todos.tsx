@@ -8,7 +8,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import NotificationSchedulerService from "./NotificationSchedulerService";
 import interactionPlugin from "@fullcalendar/interaction";
 import useSpeechToText from "../hooks/useSpeechToText";
-import { Dropdown, Avatar, Button,TextInput,Label } from "flowbite-react";
+import { Dropdown, Avatar, Button,TextInput,Label,ToggleSwitch } from "flowbite-react";
 import { Skeletonmask } from "./skeletonMask";
 import "../App.css";
 import { toast } from "react-toastify";
@@ -66,21 +66,33 @@ export const Todos = () => {
   const [Lname, setLname] = useState('');
   const [userInfo, setUserInfo] = useState<any[]>([]);
   const [profileImgPreview, setProfileImgPreview] = useState(constants.defaultUser);
+  const [theme,setTheme] = useState(false);
+  const [themeClass, setThemeClass] = useState('themeLight');
+  const [isDropdownVisible, setDropdownVisible] = useState(false);
 
   const navigate = useNavigate();
+  
+  //useSpeechToText  is designed to handle speech-to-text conversion. It likely interfaces with the Web Speech API or
+  // another speech recognition service to convert spoken language into text.
   const { isListening, transcript, startListening, stopListening } =
   useSpeechToText({ continuous: true });
+
+  //This function toggles the speech-to-text functionality based on its current state (isListening)
   const startStopListening = (e: any) => {
     e.preventDefault();
     document.getElementById("titleInput")?.focus();
     isListening ? stopVoiceInput(e) : startListening();
   };
-  useEffect(() => {
-    const uniqueEmails = [...new Set(todos.map((task) => task.email))];
-    setEmailOptions(uniqueEmails);
-  }, [todos]);
 
   useEffect(() => {
+    const uniqueEmails = [...new Set(todos.map((task) => task.email))]; //gives an email array removing duplicate mails
+    setEmailOptions(uniqueEmails);
+  }, [todos]); //The dependency array [todos] tells React to re-run the effect whenever the todos state changes.
+
+  useEffect(() => {
+    //sets up a connection to a server-sent events (SSE) endpoint
+    //This establishes a persistent connection to the server, allowing 
+    //the server to push updates to the client in real-time.
     const eventSource = new EventSource('http://localhost:3000/api/v1/sseevents');
     eventSource.onmessage = (event) => {
       const newMessage = JSON.parse(event.data);
@@ -812,10 +824,6 @@ export const Todos = () => {
   }
  };
 
- const handleSettings = () =>{
-   setShowView('settings');
- };
-
  const handleImageChange = (e) => {
    const file = e.target.files[0];
 
@@ -830,11 +838,17 @@ export const Todos = () => {
 
  const handleSubmit = async (e) => {
   e.preventDefault();
+  const fname = e.target.querySelectorAll('input[id="fname"]')[0].value;
+  const lname = e.target.querySelectorAll('input[id="lname"]')[0].value;
+  const cpass = e.target.querySelectorAll('input[id="cpassword"]')[0].value;
+  const newpass = e.target.querySelectorAll('input[id="new-password"]')[0].value;
 
   const userData = {
     Fname,
     Lname,
     profileImg:profileImgPreview,
+    currentpass:cpass,
+    newPass:newpass
   };
 
   try {
@@ -875,7 +889,7 @@ export const Todos = () => {
     
   } catch (error) {
     console.error('Error updating user:', error);
-    toast.error("Error updating user", {
+    toast.error(error.response.data.message, {
       position: "top-right",
       autoClose: 3000,
       hideProgressBar: true,
@@ -898,14 +912,31 @@ const userDetails = async () => {
     email: response.data.email,
     fname: response.data.Fname,
     lname: response.data.Lname,
+    password: response.data.password,
     profileImg: response.data.profileImg
   };
 
+  setFname(userDetail.fname);
+  setLname(userDetail.lname);
   setProfileImgPreview(userDetail.profileImg);
   setUserInfo(userDetail);
   console.log(userDetail);
 
 }
+const toggleDarkMode = () => {
+  if (theme) {
+    setTheme(false);
+    document.getElementsByClassName('App')[0].classList.remove('dark');
+    setThemeClass('themeLight');
+  }else{
+    setTheme(true);
+    document.getElementsByClassName('App')[0].classList.add('dark');
+    setThemeClass('themeBlack');
+  }
+}
+const toggleDropdown = () => {
+  setDropdownVisible(!isDropdownVisible);
+};
   return (
     <>
       <nav className="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700 flex items-center justify-between px-3 py-3 lg:px-5">
@@ -949,7 +980,7 @@ const userDetails = async () => {
               placeholder="Search tasks..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="px-4 py-2 w-full border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+              className="px-4 py-2 w-full border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 dark:bg-black dark:border-blue-600"
             />
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -973,7 +1004,7 @@ const userDetails = async () => {
             <span className="block text-sm">{userInfo.fname} {userInfo.lname}</span>
             <span className="block truncate text-sm font-medium">{userInfo.email}</span>
           </Dropdown.Header>
-          <Dropdown.Item onClick={handleSettings}>Settings</Dropdown.Item>
+          <Dropdown.Item onClick={() => setShowView('settings')}>Settings</Dropdown.Item>
           <Dropdown.Divider />
           <Dropdown.Item onClick={handleSignOut}>Sign out</Dropdown.Item>
         </Dropdown>
@@ -1108,7 +1139,7 @@ const userDetails = async () => {
         </div>
       </aside>
 
-      <div className="p-4 pt-7">
+      <div id="mainpage" className={`p-4 pt-7 ${themeClass}`}>
         <div className={`p-4 border-2 border-gray-200 border-dashed rounded-lg dark:border-gray-700 mt-14 ${margin}`}>
           <Model
             isOpen={isModalOpen}
@@ -1169,8 +1200,10 @@ const userDetails = async () => {
                     <div className="flex items-center justify-center p-4">
                       <button
                         id="dropdownDefault"
+                        onClick={toggleDropdown}
+
                         data-dropdown-toggle="dropdown"
-                        className="text-black bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2.5 text-center inline-flex items-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
+                        className="bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2.5 text-center inline-flex items-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
                         type="button"
                       >
                         Filter by category
@@ -1193,7 +1226,7 @@ const userDetails = async () => {
 
                       <div
                         id="dropdown"
-                        className="z-10 hidden w-64 p-4 bg-white rounded-lg shadow dark:bg-gray-700"
+                        className={`z-10 ${isDropdownVisible ? '' : 'hidden'} w-64 p-4 bg-white rounded-lg shadow dark:bg-gray-700`}
                       >
                         <div className="flex justify-between items-center">
                           <h6 className="mb-3 text-sm font-medium text-gray-900 dark:text-white">
@@ -1369,7 +1402,7 @@ const userDetails = async () => {
                       </div>
                     </div>
                     <div>
-                      <select onChange={handleSortOrderChange} value={sortOrder} className="text-black bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2.5 text-center inline-flex items-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800 focus:outline-gray border-none">
+                      <select onChange={handleSortOrderChange} value={sortOrder} className="bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2.5 text-center inline-flex items-center dark:bg-inherit dark:hover:bg-primary-700 dark:focus:ring-primary-800 focus:outline-gray border-none">
                         <option value="newest">Sort by Newest</option>
                         <option value="oldest">Sort by Oldest</option>
                         <option value="asc">Sort by Ascending</option>
@@ -1593,20 +1626,32 @@ const userDetails = async () => {
                 <form className="flex items-center flex-col" onSubmit={handleSubmit}>
                   <div className="flex items-center flex-col gap-2">
                     <Avatar img={profileImgPreview} size="xl" />
+                    <div className="absolute pb-6 mt-24 w-36 text-white flex items-center justify-center bg-black bg-opacity-50" onClick={() => document.getElementById('profileImg').click()}>Edit</div>
                     <input type="file" id="profileImg" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
-                    <Button color="light" pill onClick={() => document.getElementById('profileImg').click()}>Edit</Button>
+                    {/* <Button color="dark" onClick={() => document.getElementById('profileImg').click()}>Edit</Button> */}
                   </div>
                   <div className="w-2/4 gap-6 flex flex-col">
                   <div>
                     <Label htmlFor="Fname" value="First Name" />
-                    <TextInput type="text" placeholder="First Name" value={userInfo.fname|| Fname} onChange={(e) => setFname(e.target.value)} />
+                    <TextInput type="text" id="fname" placeholder="First Name" autoComplete="off" value={Fname} onChange={(e) => setFname(e.target.value)} />
                   </div>
                   <div>
                     <Label htmlFor="Lname" value="Last Name" />
-                    <TextInput type="text" placeholder="Last Name" value={userInfo.lname||Lname} onChange={(e) => setLname(e.target.value)} />
+                    <TextInput type="text" id="lname" placeholder="Last Name" autoComplete="off" value={Lname} onChange={(e) => setLname(e.target.value)} />
                   </div>
-                  <Button type="submit" color="success" pill>Send</Button>
-                  <Button onClick={userDetails} color="dark" pill>Get Details</Button>
+                  <div>
+                    <Label htmlFor="cpassword" value="Current Password" />
+                    <TextInput id="cpassword" type="password" autoComplete="off" shadow />
+                  </div>
+                  <div>
+                    <Label htmlFor="new-password" value="New Password" />
+                    <TextInput id="new-password" type="password" autoComplete="off" shadow />
+                  </div>
+                  <div className="flex max-w-md flex-col items-start gap-4">
+                    <ToggleSwitch checked={theme} color="success" label="Enable Dark Mode" onChange={toggleDarkMode} />
+                  </div>
+                  <Button type="submit" color="success">Send</Button>
+                  <Button onClick={userDetails} color="dark">Refresh Details</Button>
                   </div>
                 </form>
               </>

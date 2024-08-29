@@ -70,7 +70,7 @@ router.get('/isloggedin', verifyToken, (req, res) => {
 
 router.get('/user', verifyToken, async (req, res) => {
     try {
-        const user = await User.findOne({ email: req.user.email }).select('-password');
+        const user = await User.findOne({ email: req.user.email });
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -81,30 +81,46 @@ router.get('/user', verifyToken, async (req, res) => {
 });
 
 router.put('/user', verifyToken, async (req, res) => {
-
     try {
-        const { Fname, Lname, profileImg } = updateSchema.parse(req.body);
+      const { Fname, Lname, profileImg, currentpass, newPass } = req.body;
+      const email = req.user.email;
+  
+      const user = await User.findOne({ email });
+        if (currentpass && newPass) {
+            const passwordMatch = await bcrypt.compare(currentpass, user.password);
 
+            if (!passwordMatch) {
+                return res.status(401).json({ message: 'Invalid credentials' });
+            }
+        }
+
+        // Create the update data object
         let updateData = {};
         if (Fname) updateData.Fname = Fname;
         if (Lname) updateData.Lname = Lname;
         if (profileImg) updateData.profileImg = profileImg;
-        
-
-        const updatedUser = await User.findOneAndUpdate(
-            { email: req.user.email },
-            {Fname:Fname, Lname:Lname, profileImg:profileImg},
-            { upsert: true }
-        ).select('-password');
-
-        if (!updatedUser) {
-            return res.status(404).json({ message: 'User not found' });
+        if (newPass) {
+            const hashedPassword = await bcrypt.hash(newPass, 10);
+            updateData.password = hashedPassword;
         }
-
-        res.status(200).json(updatedUser);
+  
+      // Update the user
+      const updatedUser = await User.findOneAndUpdate(
+        { email },
+        updateData,
+        { upsert: true } // Return the updated document
+      );
+  
+      if (!updatedUser) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+  
+      res.status(200).json(updatedUser);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+      console.error('Error updating user:', error);
+      res.status(500).json({ message: error.message });
     }
-});
+  });
+  
 
 module.exports = router;

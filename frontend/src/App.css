@@ -41,3 +41,24 @@
 .top-0 {
   top: -4px !important;
 }
+
+/* App.css */
+body {
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.dark body {
+  background-color: #1a202c !important; /* Example dark background */
+  color: #cbd5e0 !important; /* Example dark text color */
+}
+
+.themeBlack {
+  background-color: black !important; /* Example dark background */
+  color: whitesmoke !important;
+  height: 100vh;
+}
+
+.themeLight {
+  background-color: unset !important; /* Example dark background */
+  color: unset !important;
+}
