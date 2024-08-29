@@ -13,6 +13,8 @@ import { Skeletonmask } from "./skeletonMask";
 import "../App.css";
 import { toast } from "react-toastify";
 import {constants} from "./AllSVG";
+import AddFriends from "./AddFriends";
+import { FaBell, FaTimes, FaCheck } from 'react-icons/fa';
 
 interface Todo {
   id: number;
@@ -26,6 +28,11 @@ interface Todo {
   name: string;
   email: string;
   origin: string;
+}
+
+interface FriendRequest {
+  id: string;
+  email: string;
 }
 
 export const Todos = () => {
@@ -64,11 +71,17 @@ export const Todos = () => {
   const [showView, setShowView] = useState("task");
   const [Fname, setFname] = useState('');
   const [Lname, setLname] = useState('');
+  const [mobileNumber, setmobileNumber] = useState('');
   const [userInfo, setUserInfo] = useState<any[]>([]);
   const [profileImgPreview, setProfileImgPreview] = useState(constants.defaultUser);
   const [theme,setTheme] = useState(false);
   const [themeClass, setThemeClass] = useState('themeLight');
   const [isDropdownVisible, setDropdownVisible] = useState(false);
+  const [isAddFriendsOpen, setIsAddFriendsOpen] = useState(false);
+  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
+  const [isPopupVisible, setPopupVisible] = useState(false);
+  const [friends, setFriends] = useState<{ id: string, email: string }[]>([]);
+
 
   const navigate = useNavigate();
   
@@ -465,7 +478,122 @@ export const Todos = () => {
     fetchTodos();
     handleLoginResponse();
     userDetails();
+  }, []); 
+
+  useEffect(() => {
+    const fetchFriends = async () => {
+      try {
+        const userResponse = await axios.get('http://localhost:3000/auth/user', {
+          withCredentials: true,
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+          }
+        });
+        const friendIds = userResponse.data.friends;
+
+        // Fetch details for each friend
+        const friendDetailsPromises = friendIds.map(id =>
+          axios.get(`http://localhost:3000/auth/user/${id}`, {
+            withCredentials: true,
+            headers: {
+              "Access-Control-Allow-Origin": "*",
+            }
+          })
+        );
+        const friendDetailsResponses = await Promise.all(friendDetailsPromises);
+
+        // Extract data from responses
+        const friendsData = friendDetailsResponses.map(response => response.data);
+        setFriends(friendsData);
+      } catch (error) {
+        console.error('Error fetching friends data:', error);
+      }
+    };
+
+    fetchFriends();
   }, []);
+  
+  const handleNotificationClick = async () => {
+    setPopupVisible(!isPopupVisible);
+    if (!isPopupVisible) {
+        try {
+            const response = await axios.get('http://localhost:3000/auth/user', {
+                withCredentials: true,
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                }
+            });
+
+            if (Array.isArray(response.data.friendRequests)) {
+                const friendRequestDetails: FriendRequest[] = await Promise.all(
+                    response.data.friendRequests.map(async (requestId: string) => {
+                        try {
+                            const requestResponse = await axios.get(`http://localhost:3000/auth/user/${requestId}`, {
+                                withCredentials: true,
+                                headers: {
+                                    "Access-Control-Allow-Origin": "*",
+                                }
+                            });
+                            return {
+                                id: requestResponse.data._id,
+                                email: requestResponse.data.email,
+                            };
+                        } catch (innerError) {
+                            console.error(`Failed to fetch details for requestId ${requestId}:`, innerError);
+                            return null;
+                        }
+                    })
+                );
+
+                setFriendRequests(friendRequestDetails.filter((request): request is FriendRequest => request !== null));
+            } else {
+                console.error('Expected an array but received:', response.data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch friend requests:', error);
+        }
+    }
+};
+
+const handleAcceptRequest = async (userId: string) => {
+  try {
+    const response = await axios.post(`http://localhost:3000/api/v1/friends/accept-request/${userId}`, {}, {
+      withCredentials: true,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+      }
+    });
+
+    if (response.status === 200) {
+      setFriendRequests(prevRequests =>
+        prevRequests.filter(request => request.id !== userId)
+      );
+      console.log(response.data.message);
+    }
+  } catch (error) {
+    console.error('Failed to accept friend request:', error);
+  }
+};
+
+const handleRejectRequest = async (userId: string) => {
+  try {
+    const response = await axios.delete(`http://localhost:3000/api/v1/friends/friend-request/${userId}`, {
+      withCredentials: true,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+      }
+    });
+
+    if (response.status === 200) {
+      setFriendRequests(prevRequests =>
+        prevRequests.filter(request => request.id !== userId)
+      );
+      console.log(response.data.message);
+    }
+  } catch (error) {
+    console.error('Failed to reject friend request:', error);
+  }
+};
 
   const handleSignOut = async () => {
     try {
@@ -634,6 +762,15 @@ export const Todos = () => {
     setFilteredTodos(sortedTodos);
     setShowView('task');
   };
+
+  const handleAddFriendsClick = () => {
+    setShowView('community');
+  };
+
+  const handleModalClose = () => {
+    setIsAddFriendsOpen(false);
+  };
+  
 
   const handleCalendarViewClick = () => {
     const updatedCalendarEvents = todos.map((task) => {
@@ -840,6 +977,7 @@ export const Todos = () => {
   e.preventDefault();
   const fname = e.target.querySelectorAll('input[id="fname"]')[0].value;
   const lname = e.target.querySelectorAll('input[id="lname"]')[0].value;
+  const mobilenumber = e.target.querySelectorAll('input[id="mobilenumber"]')[0].value;
   const cpass = e.target.querySelectorAll('input[id="cpassword"]')[0].value;
   const newpass = e.target.querySelectorAll('input[id="new-password"]')[0].value;
 
@@ -848,7 +986,8 @@ export const Todos = () => {
     Lname,
     profileImg:profileImgPreview,
     currentpass:cpass,
-    newPass:newpass
+    newPass:newpass,
+    mobileNumber,
   };
 
   try {
@@ -913,11 +1052,13 @@ const userDetails = async () => {
     fname: response.data.Fname,
     lname: response.data.Lname,
     password: response.data.password,
-    profileImg: response.data.profileImg
+    profileImg: response.data.profileImg,
+    mobileNumber: response.data.mobileNumber
   };
 
   setFname(userDetail.fname);
   setLname(userDetail.lname);
+  setmobileNumber(userDetail.mobileNumber);
   setProfileImgPreview(userDetail.profileImg);
   setUserInfo(userDetail);
   console.log(userDetail);
@@ -939,7 +1080,7 @@ const toggleDropdown = () => {
 };
   return (
     <>
-      <nav className="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700 flex items-center justify-between px-3 py-3 lg:px-5">
+       <nav className="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700 flex items-center justify-between px-3 py-3 lg:px-5">
         <svg
           width="30"
           height="30"
@@ -987,9 +1128,8 @@ const toggleDropdown = () => {
               viewBox="0 0 384 512"
               width="1rem"
               version="1.1"
-              className={`absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer ${
-                isListening ? "animate-blink" : ""
-              }`}
+              className={`absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer ${isListening ? "animate-blink" : ""
+                }`}
               onClick={startStopListening}
             >
               <path
@@ -999,7 +1139,61 @@ const toggleDropdown = () => {
             </svg>
           </div>
         </div>
-        <Dropdown label={<img className="w-8 h-8 rounded-full" src={userInfo.profileImg}/>} arrowIcon={false} inline>
+
+
+        <div className="navbar-end flex-grow flex justify-end mr-5">
+          <div className="relative">
+            <FaBell
+              className="text-xl cursor-pointer"
+              onClick={handleNotificationClick}
+            />
+            {friendRequests.length > 0 && (
+              <span className="absolute top-0 right-0 inline-block w-2.5 h-2.5 bg-red-500 rounded-full"></span>
+            )}
+
+            {isPopupVisible && (
+              <div className="absolute right-0 top-11 w-64 h-[50vh] bg-white shadow-lg border border-gray-300 rounded-lg overflow-y-auto z-1000">
+                <div className="p-4 relative">
+                  <FaTimes
+                    className="absolute top-2 right-2 text-gray-500 cursor-pointer"
+                    onClick={() => setPopupVisible(false)}
+                  />
+                  <h4 className="text-lg font-semibold">Friend Requests</h4>
+                  <ul>
+                    {friendRequests.length > 0 ? (
+                      friendRequests.map((request) => (
+                        <li key={request.id} className="border-b py-2">
+                          <div className="flex justify-between items-center">
+                            <span>{request.email}</span>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => handleAcceptRequest(request.id)}
+                                className="bg-green-500 text-white px-2 py-1 rounded"
+                              >
+                                <FaCheck />
+                              </button>
+                              <button
+                                onClick={() => handleRejectRequest(request.id)}
+                                className="bg-red-500 text-white px-2 py-1 rounded"
+                              >
+                                <FaTimes />
+                              </button>
+                            </div>
+                          </div>
+                        </li>
+                      ))
+                    ) : (
+                      <li>No friend requests</li>
+                    )}
+                  </ul>
+                </div>
+              </div>
+            )}
+
+          </div>
+        </div>
+
+        <Dropdown label={<img className="w-8 h-8 rounded-full" src={userInfo.profileImg} />} arrowIcon={false} inline>
           <Dropdown.Header>
             <span className="block text-sm">{userInfo.fname} {userInfo.lname}</span>
             <span className="block truncate text-sm font-medium">{userInfo.email}</span>
@@ -1090,7 +1284,35 @@ const toggleDropdown = () => {
                 </span>
               </a>
             </li>
+            <li>
+              <a
+                href="#"
+                className="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group"
+                onClick={handleAddFriendsClick}
+              >
+                <svg
+                  viewBox="0 0 640 512"
+                  fill="#929292"
+                  width="25"
+                  height="25"
+                >
+                  <path
+                    d="M0 24C0 10.7 10.7 0 24 0h592c13.3 0 24 10.7 24 24s-10.7 24-24 24H24C10.7 48 0 37.3 0 24zm0 464c0-13.3 10.7-24 24-24h592c13.3 0 24 10.7 24 24s-10.7 24-24 24H24c-13.3 0-24-10.7-24-24zm211.2-328c0 35.3-28.7 64-64 64s-64-28.7-64-64 28.7-64 64-64 64 28.7 64 64zM32 320c0-35.3 28.7-64 64-64h96c12.2 0 23.7 3.4 33.4 9.4-37.2 15.1-65.6 47.2-75.8 86.6H64c-17.7 0-32-14.3-32-32zm461.6 32c-10.3-40.1-39.6-72.6-77.7-87.4 9.4-5.5 20.4-8.6 32.1-8.6h96c35.3 0 64 28.7 64 64 0 17.7-14.3 32-32 32h-82.4zm-102.4-61.6c32.1 7.4 58.1 30.9 68.9 61.6 3.5 10 5.5 20.8 5.5 32 0 17.7-14.3 32-32 32h-224c-17.7 0-32-14.3-32-32 0-11.2 1.9-22 5.5-32 10.5-29.7 35.3-52.8 66.1-60.9 7.8-2.1 16-3.1 24.5-3.1h96c7.4 0 14.7.8 21.6 2.4zm172-130.4c0 35.3-28.7 64-64 64s-64-28.7-64-64 28.7-64 64-64 64 28.7 64 64zm-241.6 96c-44.2 0-80-35.8-80-80s35.8-80 80-80 80 35.8 80 80-35.8 80-80 80z"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+
+                <span
+                  className="flex-1 ms-3 whitespace-nowrap"
+                 
+                >
+                Friends Community
+                </span>
+              </a>
+            </li>
           </ul>
+          
         </div>
         <div>
           <ul>
@@ -1326,9 +1548,7 @@ const toggleDropdown = () => {
 
                         <div
                           id="email-filters"
-                          className={`mt-4 ${
-                            filterByEmail ? "" : "hidden"
-                          } space-y-2`}
+                          className={`mt-4 ${filterByEmail ? "" : "hidden"} space-y-2`}
                         >
                           <label
                             htmlFor="email-select"
@@ -1343,8 +1563,8 @@ const toggleDropdown = () => {
                             onChange={handleEmailChange}
                             className="block w-full px-3 py-2 text-sm text-gray-900 bg-gray-50 border border-gray-300 rounded-lg dark:bg-gray-600 dark:border-gray-500 dark:text-white"
                           >
-                            {emailOptions.map((email) => (
-                              <option key={email} value={email}>
+                            {emailOptions.map((email, index) => (
+                              <option key={index} value={email}>
                                 {email}
                               </option>
                             ))}
@@ -1618,7 +1838,66 @@ const toggleDropdown = () => {
                   )}
                 </div>
               </>
-            )}{showView ==='settings' && (
+            )}
+            {showView === 'community' && (
+              <>
+                <div className="flex w-full items-center justify-between">
+                  <h1 className="font-medium my-5 pl-1 text-center sm:text-left sm:my-8 md:text-2xl text-lg dark:text-slate-200 flex items-center">
+                    Friends Community
+                  </h1>
+                </div>
+                <div className="tasks-container">
+                  {isLoading ? (
+                    <Skeletonmask viewprop={viewProp} />
+                  ) : (
+                    <ul className={`tasksList mt-4 grid gap-2 sm:gap-4 xl:gap-6 ${viewProp} items-end`}>
+                      <li>
+                        <button
+                          className="border-2 border-slate-300 text-slate-400 w-full rounded-lg border-dashed transition hover:bg-slate-300 hover:text-slate-500 dark:border-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-300 h-52 sm:h-64"
+                          onClick={() => setIsAddFriendsOpen(true)}
+                        >
+                          Add Friends
+                        </button>
+                      </li>
+                      <AddFriends isOpen={isAddFriendsOpen} onRequestClose={handleModalClose} />
+                    </ul>
+                  )}
+                </div>
+                <div className="user-profile">
+                  <h2 className="text-lg font-semibold mb-4">Friends List</h2>
+                  <div className="grid grid-cols-3 gap-4">
+                    {friends.map((friend, index) => (
+                      <article
+                        key={index}
+                        className="bg-slate-100 rounded-lg p-3 sm:p-4 flex text-left transition hover:shadow-lg hover:shadow-slate-300 dark:bg-slate-800 dark:hover:shadow-transparent flex-col"
+                      >
+                        <div className="flex flex-col flex-1">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="block font-medium dark:text-slate-200">
+                              {friend.Fname} {friend.Lname}
+                            </span>
+                          </div>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">Email: {friend.email}</p>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">Mobile: {friend.mobileNumber}</p>
+                        </div>
+                        <div className="flex items-center justify-between mt-4 border-t border-slate-200 dark:border-slate-700/[.3] pt-4">
+                          <div className="flex-1"></div>
+                          <div className="relative group">
+                            <img
+                              className="w-8 h-8 rounded-full"
+                              src={friend.profileImg || "default-profile-image-url"}
+                              alt={`${friend.Fname} ${friend.Lname}`}
+                              title={`${friend.Fname} ${friend.Lname}`}
+                            />
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+            {showView === 'settings' && (
               <>
                 <h1 className="font-medium my-5 text-center sm:text-left sm:my-8 md:text-2xl text-lg dark:text-slate-200">
                   Settings
@@ -1639,6 +1918,10 @@ const toggleDropdown = () => {
                     <Label htmlFor="Lname" value="Last Name" />
                     <TextInput type="text" id="lname" placeholder="Last Name" autoComplete="off" value={Lname} onChange={(e) => setLname(e.target.value)} />
                   </div>
+                  <div>
+                      <Label htmlFor="mobileNumber" value="Mobile Number" />
+                      <TextInput id="mobilenumber" type="number" autoComplete="off" value={mobileNumber} onChange={(e) => setmobileNumber(e.target.value)} />
+                    </div>
                   <div>
                     <Label htmlFor="cpassword" value="Current Password" />
                     <TextInput id="cpassword" type="password" autoComplete="off" shadow />

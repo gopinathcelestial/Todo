@@ -3,16 +3,33 @@ const router = express.Router();
 const { verifyToken } = require('../middlewares/auth');
 const User = require('../models/user');
 const Todo = require('../models/todo');
+const Friend = require('../models/friend');
 
 
 router.get('/users', verifyToken, async (req, res) => {
     try {
-        const users = await User.find({}, 'email');
-        res.json(users);
+        const userEmail = req.user.email;
+        const users = await User.find({ email: { $ne: userEmail } }, 'email _id');
+        
+        const emailSet = new Set();
+        const uniqueUsers = [];
+
+        users.forEach(user => {
+            if (!emailSet.has(user.email)) {
+                emailSet.add(user.email);
+                uniqueUsers.push({
+                    email: user.email,
+                    id: user._id.toString()
+                });
+            }
+        });
+
+        res.json(uniqueUsers);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
+
 
 router.post('/friend-request/:userId', verifyToken, async (req, res) => {
     try {
@@ -62,14 +79,15 @@ router.post('/accept-request/:userId', verifyToken, async (req, res) => {
     }
 });
 
-router.get('/friends', verifyToken, async (req, res) => {
-    try {
-        const user = await User.findOne({ email: req.user.email }).populate('friends', 'email');
-        res.json(user.friends);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
+// router.get('/friends', verifyToken, async (req, res) => {
+//     try {
+//         const user = await User.findOne({ email: req.user.email }).populate('friends', 'email');
+//         res.json(user.friends);
+//         console.log("the friends are", user.friends)
+//     } catch (error) {
+//         res.status(500).json({ error: error.message });
+//     }
+// });
 
 router.delete('/friends/:userId', verifyToken, async (req, res) => {
     try {
