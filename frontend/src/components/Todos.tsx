@@ -1167,68 +1167,69 @@ export const Todos = () => {
           </div>
         </div>
 
+        <div className="flex justify-between">
+          <div className="navbar-end flex-grow flex justify-end mr-5 mt-2">
+            <div className="relative">
+              <FaBell
+                className="text-xl cursor-pointer"
+                onClick={handleNotificationClick}
+              />
+              {friendRequests.length > 0 && (
+                <span className="absolute top-0 right-0 inline-block w-2.5 h-2.5 bg-red-500 rounded-full"></span>
+              )}
 
-        <div className="navbar-end flex-grow flex justify-end mr-5">
-          <div className="relative">
-            <FaBell
-              className="text-xl cursor-pointer"
-              onClick={handleNotificationClick}
-            />
-            {friendRequests.length > 0 && (
-              <span className="absolute top-0 right-0 inline-block w-2.5 h-2.5 bg-red-500 rounded-full"></span>
-            )}
-
-            {isPopupVisible && (
-              <div className="absolute right-0 top-11 w-64 h-[50vh] bg-white shadow-lg border border-gray-300 rounded-lg overflow-y-auto z-1000">
-                <div className="p-4 relative">
-                  <FaTimes
-                    className="absolute top-2 right-2 text-gray-500 cursor-pointer"
-                    onClick={() => setPopupVisible(false)}
-                  />
-                  <h4 className="text-lg font-semibold">Friend Requests</h4>
-                  <ul>
-                    {friendRequests.length > 0 ? (
-                      friendRequests.map((request) => (
-                        <li key={request.id} className="border-b py-2">
-                          <div className="flex justify-between items-center">
-                            <span>{request.email}</span>
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => handleAcceptRequest(request.id)}
-                                className="bg-green-500 text-white px-2 py-1 rounded"
-                              >
-                                <FaCheck />
-                              </button>
-                              <button
-                                onClick={() => handleRejectRequest(request.id)}
-                                className="bg-red-500 text-white px-2 py-1 rounded"
-                              >
-                                <FaTimes />
-                              </button>
+              {isPopupVisible && (
+                <div className="absolute right-0 top-11 w-64 h-[50vh] bg-white shadow-lg border border-gray-300 rounded-lg overflow-y-auto z-1000">
+                  <div className="p-4 relative">
+                    <FaTimes
+                      className="absolute top-2 right-2 text-gray-500 cursor-pointer"
+                      onClick={() => setPopupVisible(false)}
+                    />
+                    <h4 className="text-lg font-semibold">Friend Requests</h4>
+                    <ul>
+                      {friendRequests.length > 0 ? (
+                        friendRequests.map((request) => (
+                          <li key={request.id} className="border-b py-2">
+                            <div className="flex justify-between items-center">
+                              <span>{request.email}</span>
+                              <div className="flex space-x-2">
+                                <button
+                                  onClick={() => handleAcceptRequest(request.id)}
+                                  className="bg-green-500 text-white px-2 py-1 rounded"
+                                >
+                                  <FaCheck />
+                                </button>
+                                <button
+                                  onClick={() => handleRejectRequest(request.id)}
+                                  className="bg-red-500 text-white px-2 py-1 rounded"
+                                >
+                                  <FaTimes />
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        </li>
-                      ))
-                    ) : (
-                      <li>No friend requests</li>
-                    )}
-                  </ul>
+                          </li>
+                        ))
+                      ) : (
+                        <li>No friend requests</li>
+                      )}
+                    </ul>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
+            </div>
           </div>
-        </div>
 
-        <Dropdown label={<img className="w-8 h-8 rounded-full" src={userInfo.profileImg} />} arrowIcon={false} inline>
-          <Dropdown.Header>
-            <span className="block text-sm">{userInfo.fname} {userInfo.lname}</span>
-            <span className="block truncate text-sm font-medium">{userInfo.email}</span>
-          </Dropdown.Header>
-          <Dropdown.Item onClick={() => setShowView('settings')}>Settings</Dropdown.Item>
-          <Dropdown.Divider />
-          <Dropdown.Item onClick={handleSignOut}>Sign out</Dropdown.Item>
-        </Dropdown>
+          <Dropdown label={<img className="w-8 h-8 rounded-full" src={userInfo.profileImg} />} arrowIcon={false} inline>
+            <Dropdown.Header>
+              <span className="block text-sm">{userInfo.fname} {userInfo.lname}</span>
+              <span className="block truncate text-sm font-medium">{userInfo.email}</span>
+            </Dropdown.Header>
+            <Dropdown.Item onClick={() => setShowView('settings')}>Settings</Dropdown.Item>
+            <Dropdown.Divider />
+            <Dropdown.Item onClick={handleSignOut}>Sign out</Dropdown.Item>
+          </Dropdown>
+        </div>
       </nav>
 
       <aside
@@ -1864,79 +1865,76 @@ export const Todos = () => {
             )}
             {showView === 'community' && (
               <>
-                <div className="flex w-full items-center justify-between">
-                  <h1 className="font-medium my-5 pl-1 text-center sm:text-left sm:my-8 md:text-2xl text-lg dark:text-slate-200 flex items-center">
-                    Friends Community
-                  </h1>
-                </div>
-                <div className="tasks-container">
-                  {isLoading ? (
-                    <Skeletonmask viewprop={viewProp} />
-                  ) : (
-                    <ul className={`tasksList mt-4 grid gap-2 sm:gap-4 xl:gap-6 ${viewProp} items-end`}>
-                      <li>
-                        <button
-                          className="border-2 border-slate-300 text-slate-400 w-full rounded-lg border-dashed transition hover:bg-slate-300 hover:text-slate-500 dark:border-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-300 h-52 sm:h-64"
-                          onClick={() => setIsAddFriendsOpen(true)}
-                        >
-                          Add Friends
-                        </button>
-                      </li>
-                      <AddFriends isOpen={isAddFriendsOpen} onRequestClose={handleModalClose} />
-                    </ul>
-                  )}
-                </div>
-                <div className="user-profile">
-                  <div className="grid grid-cols-3 gap-4 mt-4">
-                    {friends.map((friend, index) => (
-                      <article
-                        key={index}
-                        className="bg-slate-100 rounded-lg p-3 sm:p-4 flex text-left transition hover:shadow-lg hover:shadow-slate-300 dark:bg-slate-800 dark:hover:shadow-transparent flex-col"
-                      >
-                        <div className="flex flex-col flex-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="block font-medium dark:text-slate-200">
-                              {friend.Fname} {friend.Lname}
-                            </span>
+                <div className="flex justify-between">
+                  <div className="w-full">
+                    <div className="flex w-full items-center justify-between">
+                      <h1 className="font-medium my-5 pl-1 text-center sm:text-left sm:my-8 md:text-2xl text-lg dark:text-slate-200 flex items-center">
+                        Friends Community
+                      </h1>
+                    </div>
+                    <div className="tasks-container">
+                      {isLoading ? (
+                        <Skeletonmask viewprop={viewProp} />
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4 ml-12">
+                          <div>
+                            <button
+                              className="border-2 border-slate-300 text-slate-400 w-full max-w-sm rounded-lg border-dashed transition hover:bg-slate-300 hover:text-slate-500 dark:border-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-300 h-52 sm:h-64"
+                              onClick={() => setIsAddFriendsOpen(true)}
+                            >
+                              Add Friends
+                            </button>
                           </div>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">Email: {friend.email}</p>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">Mobile: {friend.mobileNumber}</p>
+                          {friends.map((friend, index) => (
+                            <article
+                              key={index}
+                              className="bg-slate-100 rounded-lg p-3 sm:p-4 flex text-left transition hover:shadow-lg hover:shadow-slate-300 dark:bg-slate-800 dark:hover:shadow-transparent flex-col w-full max-w-sm h-64" // Set fixed height here
+                            >
+                              <div className="flex flex-col flex-1">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="block font-medium dark:text-slate-200">
+                                    {friend.Fname} {friend.Lname}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-slate-600 dark:text-slate-400">Email: {friend.email}</p>
+                                <p className="text-sm text-slate-600 dark:text-slate-400">Mobile: {friend.mobileNumber}</p>
+                              </div>
+                              <div className="flex items-center justify-between mt-4 border-t border-slate-200 dark:border-slate-700/[.3] pt-4">
+                                <div className="flex-1"></div>
+                                <div className="relative group flex">
+                                  <img
+                                    className="w-8 h-8 rounded-full"
+                                    src={friend.profileImg || "default-profile-image-url"}
+                                  />
+                                  <div>
+                                    <Dropdown
+                                      label=""
+                                      dismissOnClick={true}
+                                      renderTrigger={() => (
+                                        <svg
+                                          className="w-5 h-5"
+                                          aria-hidden="true"
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          fill="currentColor"
+                                          viewBox="0 0 4 15"
+                                        >
+                                          <path d="M3.5 1.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6.041a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 5.959a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
+                                        </svg>
+                                      )}
+                                    >
+                                      <Dropdown.Item onClick={() => handleDeleteFriend(friend._id)}>
+                                        Delete
+                                      </Dropdown.Item>
+                                    </Dropdown>
+                                  </div>
+                                </div>
+                              </div>
+                            </article>
+                          ))}
+                          <AddFriends isOpen={isAddFriendsOpen} onRequestClose={handleModalClose} />
                         </div>
-                        <div className="flex items-center justify-between mt-4 border-t border-slate-200 dark:border-slate-700/[.3] pt-4">
-                          <div className="flex-1"></div>
-                          <div className="relative group flex">
-                            <img
-                              className="w-8 h-8 rounded-full"
-                              src={friend.profileImg || "default-profile-image-url"}
-                              alt={`${friend.Fname} ${friend.Lname}`}
-                              title={`${friend.Fname} ${friend.Lname}`}
-                            />
-                            <div>
-                              <Dropdown
-                                label=""
-                                dismissOnClick={true}
-                                renderTrigger={() => (
-                                  <svg
-                                    className="w-5 h-5"
-                                    aria-hidden="true"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="currentColor"
-                                    viewBox="0 0 4 15"
-                                  >
-                                    <path d="M3.5 1.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6.041a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 5.959a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
-                                  </svg>
-                                )}
-                              >
-                                <Dropdown.Item onClick={() => handleDeleteFriend(friend._id)}>
-                                  Delete
-                                </Dropdown.Item>
-                              </Dropdown>
-                            </div>
-
-                          </div>
-                        </div>
-                      </article>
-                    ))}
+                      )}
+                    </div>
                   </div>
                 </div>
               </>
