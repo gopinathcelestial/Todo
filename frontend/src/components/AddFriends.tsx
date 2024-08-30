@@ -86,7 +86,7 @@ export const AddFriend: React.FC<AddFriendsProps> = ({
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     const successfulRequests: { email: string; id: string }[] = [];
-    
+
     try {
       for (const user of addedEmails) {
         try {
@@ -218,7 +218,6 @@ export const AddFriend: React.FC<AddFriendsProps> = ({
               </div>
               {friendsRequest.length > 0 && (
                 <div className="mt-4">
-                  Successfully sent friend requests to {friendsRequest.length} user(s).
                 </div>
               )}
               <div className="mt-4 flex flex-wrap">

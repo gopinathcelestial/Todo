@@ -44,6 +44,10 @@ router.post('/friend-request/:userId', verifyToken, async (req, res) => {
             return res.status(400).json({ message: 'Friend request already sent' });
         }
 
+        if (receiver.friends.includes(sender._id)) {
+            return res.status(400).json({ message: 'You are already friends' });
+        }
+
         receiver.friendRequests.push(sender._id);
         await receiver.save();
 
@@ -79,15 +83,15 @@ router.post('/accept-request/:userId', verifyToken, async (req, res) => {
     }
 });
 
-// router.get('/friends', verifyToken, async (req, res) => {
-//     try {
-//         const user = await User.findOne({ email: req.user.email }).populate('friends', 'email');
-//         res.json(user.friends);
-//         console.log("the friends are", user.friends)
-//     } catch (error) {
-//         res.status(500).json({ error: error.message });
-//     }
-// });
+router.get('/friends', verifyToken, async (req, res) => {
+    try {
+        const user = await User.findOne({ email: req.user.email }).populate('friends', 'email');
+        res.json(user.friends);
+        console.log("the friends are", user.friends)
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 router.delete('/friends/:userId', verifyToken, async (req, res) => {
     try {

@@ -1,12 +1,28 @@
-import React, { useState } from "react";
+/* eslint-disable react-hooks/rules-of-hooks */
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 import { toast } from "react-toastify";
 import { Avatar, ListGroup, Tooltip } from "flowbite-react";
 import useSpeechToText from "../hooks/useSpeechToText";
+import { FaToggleOn, FaToggleOff } from 'react-icons/fa';
 
-export const Model = ({
+interface ModelProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  taskTitle?: string;
+  taskDescription?: string;
+  isCompleted?: boolean;
+  duedate?: string;
+  reminderTime?: string;
+  reminderDays?: string[];
+  id?: string;
+  onTodoAdded: () => void;
+}
+
+export const Model: React.FC<ModelProps> = ({
   isOpen,
   onClose,
   title,
@@ -28,24 +44,80 @@ export const Model = ({
   const [dueDate, setDueDate] = useState(initialDuedate || ""); // State for due date
   const [reminderTime, setReminderTime] = useState(initialReminderTime || ""); // State for reminder time
   const [reminderDays, setReminderDays] = useState(initialReminderDays || []); // State for reminder days
-  const [isCompleted, setIsCompleted] = useState(initialIsCompleted || false);
+  // const [isCompleted, setIsCompleted] = useState(initialIsCompleted || false);
   const [showDueDate, setShowDueDate] = useState(false);
   const [showReminderTime, setShowReminderTime] = useState(false);
   const [showReminderDays, setShowReminderDays] = useState(false);
+  const [showInput, setShowInput] = useState(false);
+  const [friends, setFriends] = useState<{ id: string, email: string }[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredFriends, setFilteredFriends] = useState([]);
 
   const { isListening, transcript, startListening, stopListening } =
     useSpeechToText({ continuous: true });
-  const startStopListening = (e) => {
+  const startStopListening = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     document.getElementById("titleInput")?.focus();
     isListening ? stopVoiceInput(e) : startListening();
   };
 
-  const stopVoiceInput = async (e) => {
+  const toggleInput = () => {
+    setShowInput(!showInput);
+  };
+
+  useEffect(() => {
+    const fetchFriends = async () => {
+      try {
+        const userResponse = await axios.get('http://localhost:3000/auth/user', {
+          withCredentials: true,
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+          }
+        });
+        const friendIds = userResponse.data.friends;
+
+        // Fetch details for each friend
+        const friendDetailsPromises = friendIds.map(id =>
+          axios.get(`http://localhost:3000/auth/user/${id}`, {
+            withCredentials: true,
+            headers: {
+              "Access-Control-Allow-Origin": "*",
+            }
+          })
+        );
+        const friendDetailsResponses = await Promise.all(friendDetailsPromises);
+
+        // Extract data from responses
+        const friendsData = friendDetailsResponses.map(response => response.data);
+        setFriends(friendsData);
+      } catch (error) {
+        console.error('Error fetching friends data:', error);
+      }
+    };
+
+    fetchFriends();
+  }, []);
+
+
+  useEffect(() => {
+    if (searchTerm) {
+      const filtered = friends.filter(friend =>
+        friend.email.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredFriends(filtered);
+    } else {
+      setFilteredFriends([]);
+    }
+  }, [searchTerm, friends]);
+
+  const stopVoiceInput = async (e: React.MouseEvent<HTMLButtonElement>) => {
     try {
       stopListening();
-      e.currentTarget.disabled = true;
-      console.log('transcript', transcript)
+      // Use `e.currentTarget` which is of type `HTMLButtonElement`
+      const button = e.currentTarget;
+      button.disabled = true;
+
+      console.log('transcript', transcript);
       if (transcript === '') {
         toast.info("I didn't get you, can you say that again?", {
           position: "top-right",
@@ -76,22 +148,23 @@ export const Model = ({
           }
         );
         const data = response.data;
-        setTaskTitle(data.title)
-        setTaskDescription(data.description)
-        if (data.due_date != "No due date found") {
-          setDueDate(data.due_date)
-          setShowDueDate(true)
+        setTaskTitle(data.title);
+        setTaskDescription(data.description);
+        if (data.due_date !== "No due date found") {
+          setDueDate(data.due_date);
+          setShowDueDate(true);
         }
         console.log("Extracted entities:", data);
       }
-      e.target.disabled = false;
+      button.disabled = false;
     } catch (error) {
       console.error("Error extracting entities:", error);
-      e.target.disabled = false;
+      (e.currentTarget as HTMLButtonElement).disabled = false;
     }
   };
 
-  const handleSubmit = async (event:any) => {
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
       let response;
@@ -186,10 +259,10 @@ export const Model = ({
             ></path>
           </svg>
         </button>
-        <h2 className="font-medium mb-5 text-lg md:text-2xl">{title}</h2>
-        <div className="flex justify-between items-center mb-5">
+        <h2 className="font-medium mb-5 text-lg md:text-2xl text-center">{title}</h2>
+        <div className="flex justify-center items-center mb-5">
           <button
-            className="btn px-2 text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700 flex items-center"
+            className="btn px-2 text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700 flex items-center "
             onClick={startStopListening}
             id="voiceBtn"
           >
@@ -349,7 +422,40 @@ export const Model = ({
               </li>
             </ul>
           </div>
+          <div>
+            <div className="mt-4">
+              <label className="pb-6">Share Todo with Friends</label>
+            </div>
 
+            <div onClick={toggleInput} style={{ cursor: 'pointer', fontSize: '40px' }}>
+              {showInput ? <FaToggleOn color="blue" /> : <FaToggleOff color="grey" />}
+            </div>
+
+            {showInput && (
+              <div className="relative mt-2">
+                <input
+                  type="text"
+                  placeholder="e.g., guest@gmail.com"
+                  required
+                  className="w-full pl-2 mt-1"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                {filteredFriends.length > 0 && (
+                  <ul className="absolute z-10 w-full mt-2 bg-white border border-gray-300 shadow-lg">
+                    {filteredFriends.map(friend => (
+                      <li
+                        key={friend._id}
+                        className="p-2 hover:bg-gray-200 cursor-pointer"
+                      >
+                        {friend.email}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
           <div className="flex justify-center">
             <button
               type="submit"
@@ -364,23 +470,50 @@ export const Model = ({
   );
 };
 
-export const SyncAcc = ({ isOpen, onClose, title, todos, logout, emailOptions }) => {
+interface Todo {
+  email: string;
+  picture: string;
+  name: string;
+  origin: 'google' | 'microsoft';
+}
+interface EmailOption {
+  email: string;
+}
+
+interface SyncAccProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  todos: Todo[];
+  logout: (email: string) => void;
+  emailOptions: EmailOption[];
+}
+
+export const SyncAcc: React.FC<SyncAccProps> = ({
+  isOpen,
+  onClose,
+  title,
+  todos,
+  logout,
+  emailOptions,
+}) => {
+
   const uniqueGoogleEmails = new Set();
   const uniqueMicrosoftEmails = new Set();
-  const [selectedAvatar, setSelectedAvatar] = useState(null);
+  const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
   const [displayAs, setDisplayAs] = useState('list');
-  const emailCounts = {};
+  const emailCounts: { [email: string]: number } = {};
   const logoutIcon = 'https://c3.klipartz.com/pngpicture/421/12/sticker-png-sword-art-online-vector-icons-logout-thumbnail.png';
   const stackedIcon = <svg width="30px" height="30px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" transform="rotate(0)"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M18 8L6 8M6 8L10.125 4M6 8L10.125 12" stroke="#1C274C" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"></path> <path opacity="0.5" d="M6 16L18 16M18 16L13.875 12M18 16L13.875 20" stroke="#1C274C" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"></path> </g></svg>
   const listIcon = <svg width="30px" height="30px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" strokeWidth="0"></g><g id="SVGRepo_tracerCarrier" strokeLinecap="round" strokeLinejoin="round"></g><g id="SVGRepo_iconCarrier"> <path opacity="0.5" d="M16 18L16 6M16 6L20 10.125M16 6L12 10.125" stroke="#1C274C" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"></path> <path d="M8 6L8 18M8 18L12 13.875M8 18L4 13.875" stroke="#1C274C" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"></path> </g></svg>
 
 
-  const handleGoogleLogin = async (event) => {
+  const handleGoogleLogin = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     window.location.href = "http://localhost:3000/googlelogin";
   };
 
-  const handleMicrosoftLogin = async (event) => {
+  const handleMicrosoftLogin = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     window.location.href = "http://localhost:3000/microsoftlogin";
   };
@@ -390,11 +523,11 @@ export const SyncAcc = ({ isOpen, onClose, title, todos, logout, emailOptions })
     emailCounts[email] = (emailCounts[email] || 0) + 1;
   });
 
-  const handleLogout = async (email) => {
+  const handleLogout = async (email: string) => {
     if (selectedAvatar || email) {
-      console.log(selectedAvatar||email);
-      logout(selectedAvatar||email);
-      toast.success(`Selected avatar: ${selectedAvatar||email}`, {
+      console.log(selectedAvatar || email);
+      logout(selectedAvatar || email);
+      toast.success(`Selected avatar: ${selectedAvatar || email}`, {
         position: "top-right",
         autoClose: 3000,
         hideProgressBar: true,
@@ -408,21 +541,22 @@ export const SyncAcc = ({ isOpen, onClose, title, todos, logout, emailOptions })
     }
   };
 
-  const displayAccountAs = () =>{
+  const displayAccountAs = () => {
     if (displayAs === 'avatar') {
       setDisplayAs('list');
-    }else{
+    } else {
       setDisplayAs('avatar');
     }
   };
 
-  const handleAvatarClick = (email) => {
+  const handleAvatarClick = (email: string | null) => {
     if (selectedAvatar === email) {
       setSelectedAvatar(null);
     } else {
       setSelectedAvatar(email);
     }
   };
+
 
   return (
     <div className={`z-50 fixed top-0 left-0 w-full h-full flex items-center justify-center bg-gray-500 bg-opacity-50 ${isOpen ? "" : "hidden"}`}>
@@ -462,7 +596,7 @@ export const SyncAcc = ({ isOpen, onClose, title, todos, logout, emailOptions })
             </button>
           </div>
         </div>
-        {(emailOptions.length >1)? <div className="flex items-center justify-between mr-[5px]"> Already logged in accounts <span className="bg-slate-200" title={displayAs === 'avatar'? 'View as List': 'View as Stacked'} onClick={()=>{displayAccountAs()}}>{displayAs === 'avatar'? stackedIcon: listIcon}</span></div>:''}    
+        {(emailOptions.length > 1) ? <div className="flex items-center justify-between mr-[5px]"> Already logged in accounts <span className="bg-slate-200" title={displayAs === 'avatar' ? 'View as List' : 'View as Stacked'} onClick={() => { displayAccountAs() }}>{displayAs === 'avatar' ? stackedIcon : listIcon}</span></div> : ''}
         <div className="flex justify-center pt-5">
           <div className="w-1/2 flex justify-center pr-2">
             {displayAs === 'avatar' ? (
@@ -518,8 +652,8 @@ export const SyncAcc = ({ isOpen, onClose, title, todos, logout, emailOptions })
                   })
                   .map((todo) => (
                     <div className="flex items-center justify-between mr-[5px]" key={todo.email}>
-                      <ListGroup.Item title={'Google: '+todo.email} onClick={() => handleAvatarClick(todo.email)}>
-                        <img width="30px" title={'Google: '+todo.email} src={todo.picture} />
+                      <ListGroup.Item title={'Google: ' + todo.email} onClick={() => handleAvatarClick(todo.email)}>
+                        <img width="30px" title={'Google: ' + todo.email} src={todo.picture} />
                         <span className="ms-3">{todo.name}</span>
                       </ListGroup.Item>
                       <img width="30px" className="ms-3 rounded-full" src={logoutIcon} onClick={() => handleLogout(todo.email)} />
@@ -529,42 +663,42 @@ export const SyncAcc = ({ isOpen, onClose, title, todos, logout, emailOptions })
             )}
           </div>
           <div className="w-1/2 flex justify-center pl-2">
-          {displayAs === 'avatar' ? (
-            <Avatar.Group>
-              {todos
-                .filter((todo) => todo.origin === "microsoft")
-                .filter((todo) => {
-                  if (!uniqueMicrosoftEmails.has(todo.email)) {
-                    uniqueMicrosoftEmails.add(todo.email);
-                    return true;
+            {displayAs === 'avatar' ? (
+              <Avatar.Group>
+                {todos
+                  .filter((todo) => todo.origin === "microsoft")
+                  .filter((todo) => {
+                    if (!uniqueMicrosoftEmails.has(todo.email)) {
+                      uniqueMicrosoftEmails.add(todo.email);
+                      return true;
+                    }
+                    return false;
+                  })
+                  .map((todo) => (
+                    <div key={todo.email} className="relative">
+                      <Tooltip content={<img height="30px" width="50px" src={logoutIcon} onClick={() => handleLogout(todo.email)} />} className="rounded-full py-[5px] px-[7px]" style="light" trigger="click" arrow={true}>
+                        <Avatar
+                          key={todo.email}
+                          title={todo.email}
+                          img={todo.picture}
+                          onClick={() => handleAvatarClick(todo.email)}
+                          rounded
+                          bordered={selectedAvatar === todo.email}
+                          color={selectedAvatar === todo.email ? "pink" : ""}
+                          stacked
+                        />
+                      </Tooltip>
+                    </div>
+                  ))}
+                {Object.keys(emailCounts).map((email) => {
+                  if (emailCounts[email] > 3 && uniqueMicrosoftEmails.has(email)) {
+                    return <Avatar.Counter key={`counter-${email}`} total={emailCounts[email] - 3} href="#" />;
                   }
-                  return false;
-                })
-                .map((todo) => (
-                  <div key={todo.email} className="relative">
-                    <Tooltip content={<img height="30px" width="50px" src={logoutIcon} onClick={() => handleLogout(todo.email)} />} className="rounded-full py-[5px] px-[7px]" style="light" trigger="click" arrow={true}>
-                      <Avatar
-                        key={todo.email}
-                        title={todo.email}
-                        img={todo.picture}
-                        onClick={() => handleAvatarClick(todo.email)}
-                        rounded
-                        bordered={selectedAvatar === todo.email}
-                        color={selectedAvatar === todo.email ? "pink" : ""}
-                        stacked
-                      />
-                    </Tooltip>
-                  </div>
-                ))}
-              {Object.keys(emailCounts).map((email) => {
-                if (emailCounts[email] > 3 && uniqueMicrosoftEmails.has(email)) {
-                  return <Avatar.Counter key={`counter-${email}`} total={emailCounts[email] - 3} href="#" />;
-                }
-                return null;
-              })}
-            </Avatar.Group>
-          ):(
-            <ListGroup className="w-full">
+                  return null;
+                })}
+              </Avatar.Group>
+            ) : (
+              <ListGroup className="w-full">
                 {todos
                   .filter((todo) => todo.origin === "microsoft")
                   .filter((todo) => {
@@ -584,7 +718,7 @@ export const SyncAcc = ({ isOpen, onClose, title, todos, logout, emailOptions })
                     </div>
                   ))}
               </ListGroup>
-          )}
+            )}
           </div>
         </div>
       </div>

@@ -8,11 +8,11 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import NotificationSchedulerService from "./NotificationSchedulerService";
 import interactionPlugin from "@fullcalendar/interaction";
 import useSpeechToText from "../hooks/useSpeechToText";
-import { Dropdown, Avatar, Button,TextInput,Label,ToggleSwitch } from "flowbite-react";
+import { Dropdown, Avatar, Button, TextInput, Label, ToggleSwitch } from "flowbite-react";
 import { Skeletonmask } from "./skeletonMask";
 import "../App.css";
 import { toast } from "react-toastify";
-import {constants} from "./AllSVG";
+import { constants } from "./AllSVG";
 import AddFriends from "./AddFriends";
 import { FaBell, FaTimes, FaCheck } from 'react-icons/fa';
 
@@ -28,7 +28,7 @@ interface Todo {
   name: string;
   email: string;
   origin: string;
-  mobileNumber:number;
+  mobileNumber: number;
 }
 
 interface FriendRequest {
@@ -75,23 +75,25 @@ export const Todos = () => {
   const [mobileNumber, setmobileNumber] = useState('');
   const [userInfo, setUserInfo] = useState<any[]>([]);
   const [profileImgPreview, setProfileImgPreview] = useState(constants.defaultUser);
-  const [theme,setTheme] = useState(false);
+  const [theme, setTheme] = useState(false);
   const [themeClass, setThemeClass] = useState('themeLight');
   const [isDropdownVisible, setDropdownVisible] = useState(false);
   const [isAddFriendsOpen, setIsAddFriendsOpen] = useState(false);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [isPopupVisible, setPopupVisible] = useState(false);
-  const [friends, setFriends] = useState<{ id: string, email: string }[]>([]);
+  const [friends, setFriends] = useState<{
+    Fname: ReactNode;
+    Lname: ReactNode;
+    mobileNumber: ReactNode;
+    profileImg: string; id: string, email: string
+  }[]>([]);
 
 
   const navigate = useNavigate();
-  
-  //useSpeechToText  is designed to handle speech-to-text conversion. It likely interfaces with the Web Speech API or
-  // another speech recognition service to convert spoken language into text.
-  const { isListening, transcript, startListening, stopListening } =
-  useSpeechToText({ continuous: true });
 
-  //This function toggles the speech-to-text functionality based on its current state (isListening)
+  const { isListening, transcript, startListening, stopListening } =
+    useSpeechToText({ continuous: true });
+
   const startStopListening = (e: any) => {
     e.preventDefault();
     document.getElementById("titleInput")?.focus();
@@ -99,19 +101,16 @@ export const Todos = () => {
   };
 
   useEffect(() => {
-    const uniqueEmails = [...new Set(todos.map((task) => task.email))]; //gives an email array removing duplicate mails
+    const uniqueEmails = [...new Set(todos.map((task) => task.email))];
     setEmailOptions(uniqueEmails);
-  }, [todos]); //The dependency array [todos] tells React to re-run the effect whenever the todos state changes.
+  }, [todos]);
 
   useEffect(() => {
-    //sets up a connection to a server-sent events (SSE) endpoint
-    //This establishes a persistent connection to the server, allowing 
-    //the server to push updates to the client in real-time.
     const eventSource = new EventSource('http://localhost:3000/api/v1/sseevents');
     eventSource.onmessage = (event) => {
       const newMessage = JSON.parse(event.data);
       console.log('New message from server:', newMessage);
-      setTimeout(() => {   
+      setTimeout(() => {
         const notification = new Notification(newMessage.message);
         setTimeout(() => {
           notification.close()
@@ -479,7 +478,7 @@ export const Todos = () => {
     fetchTodos();
     handleLoginResponse();
     userDetails();
-  }, []); 
+  }, []);
 
   useEffect(() => {
     const fetchFriends = async () => {
@@ -512,89 +511,93 @@ export const Todos = () => {
     };
 
     fetchFriends();
+
+    const intervalId = setInterval(fetchFriends, 30000);
+
+    return () => clearInterval(intervalId);
   }, []);
-  
+
   const handleNotificationClick = async () => {
     setPopupVisible(!isPopupVisible);
     if (!isPopupVisible) {
-        try {
-            const response = await axios.get('http://localhost:3000/auth/user', {
-                withCredentials: true,
-                headers: {
+      try {
+        const response = await axios.get('http://localhost:3000/auth/user', {
+          withCredentials: true,
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+          }
+        });
+
+        if (Array.isArray(response.data.friendRequests)) {
+          const friendRequestDetails: FriendRequest[] = await Promise.all(
+            response.data.friendRequests.map(async (requestId: string) => {
+              try {
+                const requestResponse = await axios.get(`http://localhost:3000/auth/user/${requestId}`, {
+                  withCredentials: true,
+                  headers: {
                     "Access-Control-Allow-Origin": "*",
-                }
-            });
+                  }
+                });
+                return {
+                  id: requestResponse.data._id,
+                  email: requestResponse.data.email,
+                };
+              } catch (innerError) {
+                console.error(`Failed to fetch details for requestId ${requestId}:`, innerError);
+                return null;
+              }
+            })
+          );
 
-            if (Array.isArray(response.data.friendRequests)) {
-                const friendRequestDetails: FriendRequest[] = await Promise.all(
-                    response.data.friendRequests.map(async (requestId: string) => {
-                        try {
-                            const requestResponse = await axios.get(`http://localhost:3000/auth/user/${requestId}`, {
-                                withCredentials: true,
-                                headers: {
-                                    "Access-Control-Allow-Origin": "*",
-                                }
-                            });
-                            return {
-                                id: requestResponse.data._id,
-                                email: requestResponse.data.email,
-                            };
-                        } catch (innerError) {
-                            console.error(`Failed to fetch details for requestId ${requestId}:`, innerError);
-                            return null;
-                        }
-                    })
-                );
-
-                setFriendRequests(friendRequestDetails.filter((request): request is FriendRequest => request !== null));
-            } else {
-                console.error('Expected an array but received:', response.data);
-            }
-        } catch (error) {
-            console.error('Failed to fetch friend requests:', error);
+          setFriendRequests(friendRequestDetails.filter((request): request is FriendRequest => request !== null));
+        } else {
+          console.error('Expected an array but received:', response.data);
         }
-    }
-};
-
-const handleAcceptRequest = async (userId: string) => {
-  try {
-    const response = await axios.post(`http://localhost:3000/api/v1/friends/accept-request/${userId}`, {}, {
-      withCredentials: true,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
+      } catch (error) {
+        console.error('Failed to fetch friend requests:', error);
       }
-    });
-
-    if (response.status === 200) {
-      setFriendRequests(prevRequests =>
-        prevRequests.filter(request => request.id !== userId)
-      );
-      console.log(response.data.message);
     }
-  } catch (error) {
-    console.error('Failed to accept friend request:', error);
-  }
-};
+  };
 
-const handleRejectRequest = async (userId: string) => {
-  try {
-    const response = await axios.delete(`http://localhost:3000/api/v1/friends/friend-request/${userId}`, {
-      withCredentials: true,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
+  const handleAcceptRequest = async (userId: string) => {
+    try {
+      const response = await axios.post(`http://localhost:3000/api/v1/friends/accept-request/${userId}`, {}, {
+        withCredentials: true,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+        }
+      });
+
+      if (response.status === 200) {
+        setFriendRequests(prevRequests =>
+          prevRequests.filter(request => request.id !== userId)
+        );
+        console.log(response.data.message);
       }
-    });
-
-    if (response.status === 200) {
-      setFriendRequests(prevRequests =>
-        prevRequests.filter(request => request.id !== userId)
-      );
-      console.log(response.data.message);
+    } catch (error) {
+      console.error('Failed to accept friend request:', error);
     }
-  } catch (error) {
-    console.error('Failed to reject friend request:', error);
-  }
-};
+  };
+
+  const handleRejectRequest = async (userId: string) => {
+    try {
+      const response = await axios.delete(`http://localhost:3000/api/v1/friends/friend-request/${userId}`, {
+        withCredentials: true,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+        }
+      });
+
+      if (response.status === 200) {
+        setFriendRequests(prevRequests =>
+          prevRequests.filter(request => request.id !== userId)
+        );
+        console.log(response.data.message);
+      }
+    } catch (error) {
+      console.error('Failed to reject friend request:', error);
+    }
+  };
 
   const handleSignOut = async () => {
     try {
@@ -771,7 +774,7 @@ const handleRejectRequest = async (userId: string) => {
   const handleModalClose = () => {
     setIsAddFriendsOpen(false);
   };
-  
+
 
   const handleCalendarViewClick = () => {
     const updatedCalendarEvents = todos.map((task) => {
@@ -920,102 +923,139 @@ const handleRejectRequest = async (userId: string) => {
     fetchTodos(); // Optionally refetch todos to reset the list
   };
 
- const handleViewsClick = () =>{
-  if (viewOption === 'List') {
-    setViewProp("grid-cols-1");
-    setViewOption('XL');
-    setViewIcon(constants.singleCol);
-  }else if(viewOption === 'XL'){
-    setViewProp("grid-cols-2");
-    setViewOption('L');
-    setViewIcon(constants.twoCol);
-  }else if(viewOption === 'L'){
-    setViewProp("grid-cols-3");
-    setViewOption('M');
-    setViewIcon(constants.threeCol);
-  }else if(viewOption === 'M'){
-    setViewProp("grid-cols-4");
-    setViewOption('S');
-    setViewIcon(constants.fourCol);
-  }else if(viewOption === 'S'){
-    setViewProp("grid-cols-5");
-    setViewOption('XS');
-    setViewIcon(constants.fiveCol);
-  }else if(viewOption === 'XS'){
-    setViewProp("grid-cols-6");
-    setViewOption('List');
-    setViewIcon(constants.sixCol);
-  }
- };
-
- const handleToggle = () => {
-  if (isNavOpen) {
-    setTranslate('sm:translate-x-[-14rem]');
-    setIsNavOpen(false);
-    setToggleNav(constants.ArrowForward);
-    setMargin('ml-8');
-  }else{
-    setTranslate('sm:translate-x-0');
-    setIsNavOpen(true);
-    setToggleNav(constants.ArrowBackward);
-    setMargin('ml-64');
-  }
- };
-
- const handleImageChange = (e) => {
-   const file = e.target.files[0];
-
-   const reader = new FileReader();
-   reader.onloadend = () => {
-     setProfileImgPreview(reader.result);
-   };
-   if (file) {
-     reader.readAsDataURL(file);
-   }
- };
-
- const handleSubmit = async (e) => {
-  e.preventDefault();
-  const fname = e.target.querySelectorAll('input[id="fname"]')[0].value;
-  const lname = e.target.querySelectorAll('input[id="lname"]')[0].value;
-  const mobilenumber = e.target.querySelectorAll('input[id="mobilenumber"]')[0].value;
-  const cpass = e.target.querySelectorAll('input[id="cpassword"]')[0].value;
-  const newpass = e.target.querySelectorAll('input[id="new-password"]')[0].value;
-
-  const userData = {
-    Fname,
-    Lname,
-    profileImg:profileImgPreview,
-    currentpass:cpass,
-    newPass:newpass,
-    mobileNumber,
+  const handleViewsClick = () => {
+    if (viewOption === 'List') {
+      setViewProp("grid-cols-1");
+      setViewOption('XL');
+      setViewIcon(constants.singleCol);
+    } else if (viewOption === 'XL') {
+      setViewProp("grid-cols-2");
+      setViewOption('L');
+      setViewIcon(constants.twoCol);
+    } else if (viewOption === 'L') {
+      setViewProp("grid-cols-3");
+      setViewOption('M');
+      setViewIcon(constants.threeCol);
+    } else if (viewOption === 'M') {
+      setViewProp("grid-cols-4");
+      setViewOption('S');
+      setViewIcon(constants.fourCol);
+    } else if (viewOption === 'S') {
+      setViewProp("grid-cols-5");
+      setViewOption('XS');
+      setViewIcon(constants.fiveCol);
+    } else if (viewOption === 'XS') {
+      setViewProp("grid-cols-6");
+      setViewOption('List');
+      setViewIcon(constants.sixCol);
+    }
   };
 
-  try {
-    const response = await axios.put(
-      'http://localhost:3000/auth/user',
-      userData,
-      {
+  const handleToggle = () => {
+    if (isNavOpen) {
+      setTranslate('sm:translate-x-[-14rem]');
+      setIsNavOpen(false);
+      setToggleNav(constants.ArrowForward);
+      setMargin('ml-8');
+    } else {
+      setTranslate('sm:translate-x-0');
+      setIsNavOpen(true);
+      setToggleNav(constants.ArrowBackward);
+      setMargin('ml-64');
+    }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') {
+        setProfileImgPreview(reader.result);
+      } else {
+        console.error('FileReader result is not a string');
+      }
+    };
+
+    if (file) {
+      reader.readAsDataURL(file);
+    }
+  };
+
+
+  const handleDeleteFriend = async (userId: string) => {
+    try {
+      await axios.delete(`http://localhost:3000/api/v1/friends/friends/${userId}`, {
         withCredentials: true,
         headers: {
           "Access-Control-Allow-Origin": "*",
         }
-      }
-    );
-    if (response.status === 200) {
-      toast.success('User updated successfully', {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: true,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "light",
       });
-      userDetails();
-    } else {
-      toast.error("There is some error while updating user info, please try again", {
+
+      setFriends(prevFriends => prevFriends.filter(friend => friend._id !== userId));
+      console.log('Friend removed successfully');
+    } catch (error) {
+      console.error('Error removing friend:', error);
+    }
+  };
+
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const fname = e.target.querySelectorAll('input[id="fname"]')[0].value;
+    const lname = e.target.querySelectorAll('input[id="lname"]')[0].value;
+    const mobilenumber = e.target.querySelectorAll('input[id="mobilenumber"]')[0].value;
+    const cpass = e.target.querySelectorAll('input[id="cpassword"]')[0].value;
+    const newpass = e.target.querySelectorAll('input[id="new-password"]')[0].value;
+
+    const userData = {
+      Fname,
+      Lname,
+      profileImg: profileImgPreview,
+      currentpass: cpass,
+      newPass: newpass,
+      mobileNumber,
+    };
+
+    try {
+      const response = await axios.put(
+        'http://localhost:3000/auth/user',
+        userData,
+        {
+          withCredentials: true,
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+          }
+        }
+      );
+      if (response.status === 200) {
+        toast.success('User updated successfully', {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+        });
+        userDetails();
+      } else {
+        toast.error("There is some error while updating user info, please try again", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "light",
+        });
+      }
+
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast.error(error.response.data.message, {
         position: "top-right",
         autoClose: 3000,
         hideProgressBar: true,
@@ -1026,62 +1066,48 @@ const handleRejectRequest = async (userId: string) => {
         theme: "light",
       });
     }
-    
-  } catch (error) {
-    console.error('Error updating user:', error);
-    toast.error(error.response.data.message, {
-      position: "top-right",
-      autoClose: 3000,
-      hideProgressBar: true,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-      theme: "light",
-    });
-  }
-};
-
-const userDetails = async () => {
-  const response = await axios.get(
-    `http://localhost:3000/auth/user`,
-    { withCredentials: true }
-  );
-
-  const userDetail = {
-    email: response.data.email,
-    fname: response.data.Fname,
-    lname: response.data.Lname,
-    password: response.data.password,
-    profileImg: response.data.profileImg,
-    mobileNumber: response.data.mobileNumber
   };
 
-  setFname(userDetail.fname);
-  setLname(userDetail.lname);
-  setmobileNumber(userDetail.mobileNumber);
-  setProfileImgPreview(userDetail.profileImg);
-  setUserInfo(userDetail);
-  console.log(userDetail);
+  const userDetails = async () => {
+    const response = await axios.get(
+      `http://localhost:3000/auth/user`,
+      { withCredentials: true }
+    );
 
-}
-const toggleDarkMode = () => {
-  if (theme) {
-    setTheme(false);
-    document.getElementsByClassName('App')[0].classList.remove('dark');
-    setThemeClass('themeLight');
-  }else{
-    setTheme(true);
-    document.getElementsByClassName('App')[0].classList.add('dark');
-    setThemeClass('themeBlack');
+    const userDetail = {
+      email: response.data.email,
+      fname: response.data.Fname,
+      lname: response.data.Lname,
+      password: response.data.password,
+      profileImg: response.data.profileImg,
+      mobileNumber: response.data.mobileNumber
+    };
+
+    setFname(userDetail.fname);
+    setLname(userDetail.lname);
+    setmobileNumber(userDetail.mobileNumber);
+    setProfileImgPreview(userDetail.profileImg);
+    setUserInfo(userDetail);
+    console.log(userDetail);
+
   }
-}
-const toggleDropdown = () => {
-  setDropdownVisible(!isDropdownVisible);
-};
+  const toggleDarkMode = () => {
+    if (theme) {
+      setTheme(false);
+      document.getElementsByClassName('App')[0].classList.remove('dark');
+      setThemeClass('themeLight');
+    } else {
+      setTheme(true);
+      document.getElementsByClassName('App')[0].classList.add('dark');
+      setThemeClass('themeBlack');
+    }
+  }
+  const toggleDropdown = () => {
+    setDropdownVisible(!isDropdownVisible);
+  };
   return (
     <>
-       <nav className="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700 flex items-center justify-between px-3 py-3 lg:px-5">
+      <nav className="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700 flex items-center justify-between px-3 py-3 lg:px-5">
         <svg
           width="30"
           height="30"
@@ -1306,14 +1332,14 @@ const toggleDropdown = () => {
 
                 <span
                   className="flex-1 ms-3 whitespace-nowrap"
-                 
+
                 >
-                Friends Community
+                  Friends Community
                 </span>
               </a>
             </li>
           </ul>
-          
+
         </div>
         <div>
           <ul>
@@ -1387,7 +1413,7 @@ const toggleDropdown = () => {
             emailOptions={emailOptions}
           />
           <section>
-            {showView ==='calendar' && (
+            {showView === 'calendar' && (
               <>
                 <h1 className="font-medium my-5 text-center sm:text-left sm:my-8 md:text-2xl text-lg dark:text-slate-200">
                   {title}
@@ -1409,7 +1435,7 @@ const toggleDropdown = () => {
                   select={handleDateSelect}
                 />
               </>
-            )}{showView ==='task' && (
+            )}{showView === 'task' && (
               <>
                 <div className="flex w-full items-center justify-between">
                   <h1 className="font-medium my-5 pl-1 text-center sm:text-left sm:my-8 md:text-2xl text-lg dark:text-slate-200 flex items-center">
@@ -1511,7 +1537,7 @@ const toggleDropdown = () => {
                               Incomplete Tasks
                             </label>
                           </li>
-                          {}
+                          { }
 
                           <li className="flex items-center">
                             <input
@@ -1574,9 +1600,8 @@ const toggleDropdown = () => {
 
                         <div
                           id="date-filters"
-                          className={`mt-4 ${
-                            filterByDate ? "" : "hidden"
-                          } space-y-2`}
+                          className={`mt-4 ${filterByDate ? "" : "hidden"
+                            } space-y-2`}
                         >
                           <label
                             htmlFor="start-date"
@@ -1630,11 +1655,11 @@ const toggleDropdown = () => {
                         <option value="desc">Sort by Descending</option>
                       </select>
                     </div>
-                    <button onClick={()=>handleViewsClick()}>{viewIcon}</button>
+                    <button onClick={() => handleViewsClick()}>{viewIcon}</button>
                   </div>
                 </div>
                 <div className="tasks-container">
-                {isLoading ? (<Skeletonmask viewprop={viewProp}/>) : (
+                  {isLoading ? (<Skeletonmask viewprop={viewProp} />) : (
                     <ul className={`tasksList mt-4 grid gap-2 sm:gap-4 xl:gap-6 ${viewProp} items-end`}>
                       <li>
                         <button
@@ -1690,7 +1715,7 @@ const toggleDropdown = () => {
                                   >
                                     {todo.reminderDays?.length !== 0 &&
                                       todo.reminderDays?.length !==
-                                        undefined && (
+                                      undefined && (
                                         <svg
                                           width="1.3rem"
                                           x="0px"
@@ -1709,11 +1734,10 @@ const toggleDropdown = () => {
                                 </div>
                               )}
                               <div
-                                className={`flex ${
-                                  todo.origin == undefined
-                                    ? "justify-between"
-                                    : "justify-end"
-                                } items-center border-dashed border-slate-200 dark:border-slate-700/[.3] border-t-2 w-full pt-4 mt-4`}
+                                className={`flex ${todo.origin == undefined
+                                  ? "justify-between"
+                                  : "justify-end"
+                                  } items-center border-dashed border-slate-200 dark:border-slate-700/[.3] border-t-2 w-full pt-4 mt-4`}
                               >
                                 {todo.origin == undefined && (
                                   <button
@@ -1722,15 +1746,13 @@ const toggleDropdown = () => {
                                         ? "Mark as Uncompleted"
                                         : "Mark as Completed"
                                     }
-                                    className={`${
-                                      todo.isCompleted
-                                        ? "bg-emerald-200"
-                                        : "bg-red-200"
-                                    } ${
-                                      todo.isCompleted
+                                    className={`${todo.isCompleted
+                                      ? "bg-emerald-200"
+                                      : "bg-red-200"
+                                      } ${todo.isCompleted
                                         ? "text-emerald-800"
                                         : "text-red-800"
-                                    } order-0 rounded-full font-medium`}
+                                      } order-0 rounded-full font-medium`}
                                     onClick={() =>
                                       handleMarkAsCompleted(todo.id)
                                     }
@@ -1865,8 +1887,7 @@ const toggleDropdown = () => {
                   )}
                 </div>
                 <div className="user-profile">
-                  <h2 className="text-lg font-semibold mb-4">Friends List</h2>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-3 gap-4 mt-4">
                     {friends.map((friend, index) => (
                       <article
                         key={index}
@@ -1883,13 +1904,35 @@ const toggleDropdown = () => {
                         </div>
                         <div className="flex items-center justify-between mt-4 border-t border-slate-200 dark:border-slate-700/[.3] pt-4">
                           <div className="flex-1"></div>
-                          <div className="relative group">
+                          <div className="relative group flex">
                             <img
                               className="w-8 h-8 rounded-full"
                               src={friend.profileImg || "default-profile-image-url"}
                               alt={`${friend.Fname} ${friend.Lname}`}
                               title={`${friend.Fname} ${friend.Lname}`}
                             />
+                            <div>
+                              <Dropdown
+                                label=""
+                                dismissOnClick={true}
+                                renderTrigger={() => (
+                                  <svg
+                                    className="w-5 h-5"
+                                    aria-hidden="true"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="currentColor"
+                                    viewBox="0 0 4 15"
+                                  >
+                                    <path d="M3.5 1.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6.041a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 5.959a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
+                                  </svg>
+                                )}
+                              >
+                                <Dropdown.Item onClick={() => handleDeleteFriend(friend._id)}>
+                                  Delete
+                                </Dropdown.Item>
+                              </Dropdown>
+                            </div>
+
                           </div>
                         </div>
                       </article>
@@ -1908,34 +1951,33 @@ const toggleDropdown = () => {
                     <Avatar img={profileImgPreview} size="xl" />
                     <div className="absolute pb-6 mt-24 w-36 text-white flex items-center justify-center bg-black bg-opacity-50" onClick={() => document.getElementById('profileImg').click()}>Edit</div>
                     <input type="file" id="profileImg" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
-                    {/* <Button color="dark" onClick={() => document.getElementById('profileImg').click()}>Edit</Button> */}
                   </div>
                   <div className="w-2/4 gap-6 flex flex-col">
-                  <div>
-                    <Label htmlFor="Fname" value="First Name" />
-                    <TextInput type="text" id="fname" placeholder="First Name" autoComplete="off" value={Fname} onChange={(e) => setFname(e.target.value)} />
-                  </div>
-                  <div>
-                    <Label htmlFor="Lname" value="Last Name" />
-                    <TextInput type="text" id="lname" placeholder="Last Name" autoComplete="off" value={Lname} onChange={(e) => setLname(e.target.value)} />
-                  </div>
-                  <div>
+                    <div>
+                      <Label htmlFor="Fname" value="First Name" />
+                      <TextInput type="text" id="fname" placeholder="First Name" autoComplete="off" value={Fname} onChange={(e) => setFname(e.target.value)} />
+                    </div>
+                    <div>
+                      <Label htmlFor="Lname" value="Last Name" />
+                      <TextInput type="text" id="lname" placeholder="Last Name" autoComplete="off" value={Lname} onChange={(e) => setLname(e.target.value)} />
+                    </div>
+                    <div>
                       <Label htmlFor="mobileNumber" value="Mobile Number" />
                       <TextInput id="mobilenumber" type="number" autoComplete="off" value={mobileNumber} onChange={(e) => setmobileNumber(e.target.value)} />
                     </div>
-                  <div>
-                    <Label htmlFor="cpassword" value="Current Password" />
-                    <TextInput id="cpassword" type="password" autoComplete="off" shadow />
-                  </div>
-                  <div>
-                    <Label htmlFor="new-password" value="New Password" />
-                    <TextInput id="new-password" type="password" autoComplete="off" shadow />
-                  </div>
-                  <div className="flex max-w-md flex-col items-start gap-4">
-                    <ToggleSwitch checked={theme} color="success" label="Enable Dark Mode" onChange={toggleDarkMode} />
-                  </div>
-                  <Button type="submit" color="success">Send</Button>
-                  <Button onClick={userDetails} color="dark">Refresh Details</Button>
+                    <div>
+                      <Label htmlFor="cpassword" value="Current Password" />
+                      <TextInput id="cpassword" type="password" autoComplete="off" shadow />
+                    </div>
+                    <div>
+                      <Label htmlFor="new-password" value="New Password" />
+                      <TextInput id="new-password" type="password" autoComplete="off" shadow />
+                    </div>
+                    <div className="flex max-w-md flex-col items-start gap-4">
+                      <ToggleSwitch checked={theme} color="success" label="Enable Dark Mode" onChange={toggleDarkMode} />
+                    </div>
+                    <Button type="submit" color="success">Send</Button>
+                    <Button onClick={userDetails} color="dark">Refresh Details</Button>
                   </div>
                 </form>
               </>
