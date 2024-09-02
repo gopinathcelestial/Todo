@@ -128,6 +128,10 @@ router.post('/share-todo/:todoId/:friendId', verifyToken, async (req, res) => {
             return res.status(400).json({ message: 'User is not your friend' });
         }
 
+        if (friend.sharedTodos.includes(todo._id)) {
+            return res.status(400).json({ message: 'Todo is already shared with this friend' });
+        }
+
         friend.sharedTodos.push(todo._id);
         await friend.save();
 

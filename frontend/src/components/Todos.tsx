@@ -517,46 +517,100 @@ export const Todos = () => {
     return () => clearInterval(intervalId);
   }, []);
 
-  const handleNotificationClick = async () => {
-    setPopupVisible(!isPopupVisible);
-    if (!isPopupVisible) {
+  useEffect(() => {
+    const fetchFriendRequests = async () => {
       try {
         const response = await axios.get('http://localhost:3000/auth/user', {
           withCredentials: true,
           headers: {
             "Access-Control-Allow-Origin": "*",
-          }
+          },
         });
 
         if (Array.isArray(response.data.friendRequests)) {
-          const friendRequestDetails: FriendRequest[] = await Promise.all(
-            response.data.friendRequests.map(async (requestId: string) => {
+          const friendRequestDetails = await Promise.all(
+            response.data.friendRequests.map(async (requestId) => {
               try {
-                const requestResponse = await axios.get(`http://localhost:3000/auth/user/${requestId}`, {
-                  withCredentials: true,
-                  headers: {
-                    "Access-Control-Allow-Origin": "*",
+                const requestResponse = await axios.get(
+                  `http://localhost:3000/auth/user/${requestId}`,
+                  {
+                    withCredentials: true,
+                    headers: {
+                      "Access-Control-Allow-Origin": "*",
+                    },
                   }
-                });
+                );
                 return {
                   id: requestResponse.data._id,
                   email: requestResponse.data.email,
                 };
               } catch (innerError) {
-                console.error(`Failed to fetch details for requestId ${requestId}:`, innerError);
+                console.error(
+                  `Failed to fetch details for requestId ${requestId}:`,
+                  innerError
+                );
                 return null;
               }
             })
           );
 
-          setFriendRequests(friendRequestDetails.filter((request): request is FriendRequest => request !== null));
+          setFriendRequests(
+            friendRequestDetails.filter((request) => request !== null)
+          );
         } else {
           console.error('Expected an array but received:', response.data);
         }
       } catch (error) {
         console.error('Failed to fetch friend requests:', error);
       }
-    }
+    };
+
+    fetchFriendRequests();
+  }, []);
+
+  // const handleNotificationClick = async () => {
+  //   setPopupVisible(!isPopupVisible);
+  //   if (!isPopupVisible) {
+  //     try {
+  //       const response = await axios.get('http://localhost:3000/auth/user', {
+  //         withCredentials: true,
+  //         headers: {
+  //           "Access-Control-Allow-Origin": "*",
+  //         }
+  //       });
+
+  //       if (Array.isArray(response.data.friendRequests)) {
+  //         const friendRequestDetails: FriendRequest[] = await Promise.all(
+  //           response.data.friendRequests.map(async (requestId: string) => {
+  //             try {
+  //               const requestResponse = await axios.get(`http://localhost:3000/auth/user/${requestId}`, {
+  //                 withCredentials: true,
+  //                 headers: {
+  //                   "Access-Control-Allow-Origin": "*",
+  //                 }
+  //               });
+  //               return {
+  //                 id: requestResponse.data._id,
+  //                 email: requestResponse.data.email,
+  //               };
+  //             } catch (innerError) {
+  //               console.error(`Failed to fetch details for requestId ${requestId}:`, innerError);
+  //               return null;
+  //             }
+  //           })
+  //         );
+
+  //         setFriendRequests(friendRequestDetails.filter((request): request is FriendRequest => request !== null));
+  //       } else {
+  //         console.error('Expected an array but received:', response.data);
+  //       }
+  //     } catch (error) {
+  //       console.error('Failed to fetch friend requests:', error);
+  //     }
+  //   }
+  // };
+  const handleNotificationClick = () => {
+    setPopupVisible(!isPopupVisible);
   };
 
   const handleAcceptRequest = async (userId: string) => {
@@ -1216,20 +1270,30 @@ export const Todos = () => {
                   </div>
                 </div>
               )}
-
             </div>
           </div>
 
-          <Dropdown label={<img className="w-8 h-8 rounded-full" src={userInfo.profileImg} />} arrowIcon={false} inline>
+          <Dropdown
+            label={<img className="w-8 h-8 rounded-full" src={userInfo.profileImg} />}
+            arrowIcon={false}
+            inline
+          >
             <Dropdown.Header>
-              <span className="block text-sm">{userInfo.fname} {userInfo.lname}</span>
-              <span className="block truncate text-sm font-medium">{userInfo.email}</span>
+              <span className="block text-sm">
+                {userInfo.fname} {userInfo.lname}
+              </span>
+              <span className="block truncate text-sm font-medium">
+                {userInfo.email}
+              </span>
             </Dropdown.Header>
-            <Dropdown.Item onClick={() => setShowView('settings')}>Settings</Dropdown.Item>
+            <Dropdown.Item onClick={() => setShowView('settings')}>
+              Settings
+            </Dropdown.Item>
             <Dropdown.Divider />
             <Dropdown.Item onClick={handleSignOut}>Sign out</Dropdown.Item>
           </Dropdown>
         </div>
+
       </nav>
 
       <aside
