@@ -115,29 +115,43 @@ router.delete('/friends/:userId', verifyToken, async (req, res) => {
 });
 
 router.post('/share-todo/:todoId/:friendId', verifyToken, async (req, res) => {
+    const { todoId, friendId } = req.params;
+
+    if (!todoId || !friendId) {
+        return res.status(400).json({ message: 'Todo ID and Friend ID are required' });
+    }
+
     try {
         const user = await User.findOne({ email: req.user.email });
-        const friend = await User.findById(req.params.friendId);
-        const todo = await Todo.findById(req.params.todoId);
+        const friend = await User.findById(friendId);
+        const todo = await Todo.findById(todoId);
 
-        if (!friend || !todo) {
-            return res.status(404).json({ message: 'Friend or Todo not found' });
+        if (!user || !friend || !todo) {
+            return res.status(404).json({ message: 'User, Friend, or Todo not found' });
         }
 
         if (!user.friends.includes(friend._id)) {
-            return res.status(400).json({ message: 'User is not your friend' });
+            return res.status(400).json({ message: 'Friend is not in your friend list' });
         }
 
+        // Check if the todo is already shared with this friend
         if (friend.sharedTodos.includes(todo._id)) {
             return res.status(400).json({ message: 'Todo is already shared with this friend' });
         }
 
+        // Add the todo to the friend's sharedTodos array
         friend.sharedTodos.push(todo._id);
         await friend.save();
 
+        // Optionally, you might also want to add the todo to the sender's sharedTodos if it's not already included
+        if (!user.sharedTodos.includes(todo._id)) {
+            user.sharedTodos.push(todo._id);
+            await user.save();
+        }
+
         res.json({ message: 'Todo shared successfully' });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: 'An error occurred while sharing the todo' });
     }
 });
 

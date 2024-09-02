@@ -13,6 +13,7 @@ router.get('/todos', verifyToken, async (req, res) => {
     try {
         const userEmail = req.user.email;
         const todos = await Todo.find({ userEmail });
+        console.log('main todo',todos);
         res.json(todos);
         process.nextTick(() => todoNotifier.scheduleTodoNotification(todos));
 
@@ -93,9 +94,11 @@ router.put('/todos/:id', verifyToken, (req, res) => {
         .catch(err => res.status(500).send(err.toString()));
 });
 
-router.get('/shared-todos', verifyToken, async (req, res) => {
+router.get('/shared-todos/:userId', verifyToken, async (req, res) => {
     try {
         const user = await User.findOne({ email: req.user.email }).populate('sharedTodos');
+        // console.log('the friend have sent you the ine remider od the todo',user)
+        console.log('shareTodo', user.sharedTodos)
         res.json(user.sharedTodos);
     } catch (error) {
         res.status(500).json({ error: error.message });

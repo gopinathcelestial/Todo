@@ -81,6 +81,7 @@ export const Todos = () => {
   const [isAddFriendsOpen, setIsAddFriendsOpen] = useState(false);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [isPopupVisible, setPopupVisible] = useState(false);
+  const [sharedTodos, setSharedTodos] = useState<Todo[]>([]);
   const [friends, setFriends] = useState<{
     Fname: ReactNode;
     Lname: ReactNode;
@@ -211,7 +212,6 @@ export const Todos = () => {
       await fetchTodos();
     }
 
-    // Timeout to ensure state updates are reflected
     setTimeout(() => {
       const filteredTodos = todos.filter((todo) => {
         let matches = true;
@@ -290,12 +290,11 @@ export const Todos = () => {
       });
     }
   };
-  const fetchTodos = async () => {
+  const fetchTodos = async (userId) => {
     setIsLoading(true);
     userDetails();
     const notificationSchedulerService = NotificationSchedulerService();
 
-    // Fetch Todos from your DB
     await axios
       .get("http://localhost:3000/api/v1/todos", {
         withCredentials: true,
@@ -303,10 +302,16 @@ export const Todos = () => {
           "Access-Control-Allow-Origin": "*",
         },
       })
-      .then((response) => {
-        const allTodos = response.data;
+      .then(async (response) => {
+        // const allTodos = response.data;
+        const sharedTodo = await axios.get(`http://localhost:3000/api/v1/shared-todos/${userId}`, {
+                          withCredentials: true,
+                          headers: {
+                              "Content-Type": "application/json",
+                          },
+                      });
+        const allTodos = [...sharedTodo.data, ...response.data]
 
-        // Fetch events from Google and microsoft Calendar
         axios
           .get("http://localhost:3000/events", {
             withCredentials: true,
@@ -316,18 +321,6 @@ export const Todos = () => {
           })
           .then((eventResponse) => {
             const calendarEvents = eventResponse.data;
-            // // Fetch events from Microsoft Calendar
-            // axios
-            //   .get("http://localhost:3000/microsoft/events", {
-            //     withCredentials: true,
-            //     headers: {
-            //       "Access-Control-Allow-Origin": "*",
-            //     },
-            //   }).then((calendarResponse)=>{
-            //     const microsoftEvents = calendarResponse.data;
-
-            // // Combine todos and calendar events
-            // const combinedTodos = [...allTodos, ...calendarEvents, ...microsoftEvents];
             const combinedTodos = [...allTodos, ...calendarEvents];
 
             setTodos(combinedTodos);
@@ -371,7 +364,6 @@ export const Todos = () => {
                 );
               });
             });
-            // });
 
             function getDayNumber(day: string) {
               const daysMap: { [key: string]: number } = {
@@ -491,7 +483,6 @@ export const Todos = () => {
         });
         const friendIds = userResponse.data.friends;
 
-        // Fetch details for each friend
         const friendDetailsPromises = friendIds.map(id =>
           axios.get(`http://localhost:3000/auth/user/${id}`, {
             withCredentials: true,
@@ -502,7 +493,6 @@ export const Todos = () => {
         );
         const friendDetailsResponses = await Promise.all(friendDetailsPromises);
 
-        // Extract data from responses
         const friendsData = friendDetailsResponses.map(response => response.data);
         setFriends(friendsData);
       } catch (error) {
@@ -568,47 +558,6 @@ export const Todos = () => {
     fetchFriendRequests();
   }, []);
 
-  // const handleNotificationClick = async () => {
-  //   setPopupVisible(!isPopupVisible);
-  //   if (!isPopupVisible) {
-  //     try {
-  //       const response = await axios.get('http://localhost:3000/auth/user', {
-  //         withCredentials: true,
-  //         headers: {
-  //           "Access-Control-Allow-Origin": "*",
-  //         }
-  //       });
-
-  //       if (Array.isArray(response.data.friendRequests)) {
-  //         const friendRequestDetails: FriendRequest[] = await Promise.all(
-  //           response.data.friendRequests.map(async (requestId: string) => {
-  //             try {
-  //               const requestResponse = await axios.get(`http://localhost:3000/auth/user/${requestId}`, {
-  //                 withCredentials: true,
-  //                 headers: {
-  //                   "Access-Control-Allow-Origin": "*",
-  //                 }
-  //               });
-  //               return {
-  //                 id: requestResponse.data._id,
-  //                 email: requestResponse.data.email,
-  //               };
-  //             } catch (innerError) {
-  //               console.error(`Failed to fetch details for requestId ${requestId}:`, innerError);
-  //               return null;
-  //             }
-  //           })
-  //         );
-
-  //         setFriendRequests(friendRequestDetails.filter((request): request is FriendRequest => request !== null));
-  //       } else {
-  //         console.error('Expected an array but received:', response.data);
-  //       }
-  //     } catch (error) {
-  //       console.error('Failed to fetch friend requests:', error);
-  //     }
-  //   }
-  // };
   const handleNotificationClick = () => {
     setPopupVisible(!isPopupVisible);
   };

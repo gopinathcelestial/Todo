@@ -6,7 +6,7 @@ import "react-quill/dist/quill.snow.css";
 import { toast } from "react-toastify";
 import { Avatar, ListGroup, Tooltip } from "flowbite-react";
 import useSpeechToText from "../hooks/useSpeechToText";
-import { FaToggleOn, FaToggleOff } from 'react-icons/fa';
+import { FaToggleOn, FaToggleOff, FaTimes } from 'react-icons/fa';
 
 interface ModelProps {
   isOpen: boolean;
@@ -51,7 +51,9 @@ export const Model: React.FC<ModelProps> = ({
   const [showInput, setShowInput] = useState(false);
   const [friends, setFriends] = useState<{ id: string, email: string }[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedEmails, setSelectedEmails] = useState([]);
   const [filteredFriends, setFilteredFriends] = useState([]);
+  const [sharedTodos, setSharedTodos] = useState([]);
 
   const { isListening, transcript, startListening, stopListening } =
     useSpeechToText({ continuous: true });
@@ -61,8 +63,25 @@ export const Model: React.FC<ModelProps> = ({
     isListening ? stopVoiceInput(e) : startListening();
   };
 
-  const toggleInput = () => {
-    setShowInput(!showInput);
+  const toggleInput = () => setShowInput(prev => !prev);
+
+  const handleEmailSelect = (email) => {
+    if (!selectedEmails.includes(email)) {
+      setSelectedEmails([...selectedEmails, email]);
+    }
+    setSearchTerm('');
+  };
+
+  const removeEmail = (email) => {
+    setSelectedEmails(selectedEmails.filter(e => e !== email));
+  };
+
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    // Replace with actual filtering logic
+    const filtered = []; // Your filtering logic here
+    setFilteredFriends(filtered);
   };
 
   useEffect(() => {
@@ -166,8 +185,11 @@ export const Model: React.FC<ModelProps> = ({
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    
     try {
       let response;
+      let todoId: string | null = null;
+  
       if (title === "Add new Task") {
         response = await axios.post(
           "http://localhost:3000/api/v1/todos",
@@ -186,6 +208,7 @@ export const Model: React.FC<ModelProps> = ({
             },
           }
         );
+        todoId = response.data._id;
         toast.success("Task created successfully", {
           position: "top-right",
           autoClose: 3000,
@@ -197,8 +220,30 @@ export const Model: React.FC<ModelProps> = ({
           theme: "light",
         });
         console.log("Task created:", response.data);
+  
+        if (todoId && selectedEmails.length > 0) {debugger
+          for (const email of selectedEmails) {
+            const friend = friends.find(friend => friend.email === email);
+            if (friend) {
+              try {
+                const shareResponse = await axios.post(
+                  `http://localhost:3000/api/v1/friends/share-todo/${todoId}/${friend._id}`,
+                  {}, 
+                  {
+                    withCredentials: true,
+                    headers: {
+                      "Access-Control-Allow-Origin": "*",
+                    },
+                  }
+                );
+                console.log(`Todo shared with friend ID: ${friend._id}`, shareResponse.data);
+              } catch (shareError) {
+                console.error(`Error sharing todo with friend ID: ${friend._id}`, shareError);
+              }
+            }
+          }
+        }
       } else {
-        // Edit existing task
         response = await axios.put(
           `http://localhost:3000/api/v1/todos/${id}`,
           {
@@ -216,6 +261,7 @@ export const Model: React.FC<ModelProps> = ({
             },
           }
         );
+        todoId = id;
         toast.success("Task modified successfully", {
           position: "top-right",
           autoClose: 3000,
@@ -228,13 +274,15 @@ export const Model: React.FC<ModelProps> = ({
         });
         console.log("Task updated:", response.data);
       }
-
+  
       onClose();
       onTodoAdded();
     } catch (error) {
       console.error("Error creating/updating task:", error);
     }
   };
+  
+  
 
   return (
     <div className="fixed top-0 left-0 w-full h-full flex items-center justify-center bg-gray-500 bg-opacity-50">
@@ -436,10 +484,10 @@ export const Model: React.FC<ModelProps> = ({
                 <input
                   type="text"
                   placeholder="e.g., guest@gmail.com"
-                  required
+                  // required
                   className="w-full pl-2 mt-1"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={handleSearchChange}
                 />
                 {filteredFriends.length > 0 && (
                   <ul className="absolute z-10 w-full mt-2 bg-white border border-gray-300 shadow-lg">
@@ -447,11 +495,26 @@ export const Model: React.FC<ModelProps> = ({
                       <li
                         key={friend._id}
                         className="p-2 hover:bg-gray-200 cursor-pointer"
+                        onClick={() => handleEmailSelect(friend.email)}
                       >
                         {friend.email}
                       </li>
                     ))}
                   </ul>
+                )}
+                {selectedEmails.length > 0 && (
+                  <div className="mt-2">
+                    {selectedEmails.map(email => (
+                      <span key={email} className="inline-flex items-center bg-gray-200 px-2 py-1 rounded-full m-1">
+                        {email}
+                        <FaTimes
+                          className="ml-2 cursor-pointer"
+                          onClick={() => removeEmail(email)}
+                          color="red"
+                        />
+                      </span>
+                    ))}
+                  </div>
                 )}
               </div>
             )}

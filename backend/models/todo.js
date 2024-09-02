@@ -11,7 +11,8 @@ const todoSchema = new mongoose.Schema({
     userEmail: String,
     createdAt: Date,
 }, {
-    collection: 'todo'
+    collection: 'todo',
+    timestamps: true 
 });
 
 module.exports = mongoose.model('Todo', todoSchema);
