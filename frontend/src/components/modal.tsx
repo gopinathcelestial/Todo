@@ -79,8 +79,7 @@ export const Model: React.FC<ModelProps> = ({
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearchTerm(value);
-    // Replace with actual filtering logic
-    const filtered = []; // Your filtering logic here
+    const filtered = []; 
     setFilteredFriends(filtered);
   };
 
@@ -95,7 +94,6 @@ export const Model: React.FC<ModelProps> = ({
         });
         const friendIds = userResponse.data.friends;
 
-        // Fetch details for each friend
         const friendDetailsPromises = friendIds.map(id =>
           axios.get(`http://localhost:3000/auth/user/${id}`, {
             withCredentials: true,
@@ -106,7 +104,6 @@ export const Model: React.FC<ModelProps> = ({
         );
         const friendDetailsResponses = await Promise.all(friendDetailsPromises);
 
-        // Extract data from responses
         const friendsData = friendDetailsResponses.map(response => response.data);
         setFriends(friendsData);
       } catch (error) {
@@ -132,7 +129,6 @@ export const Model: React.FC<ModelProps> = ({
   const stopVoiceInput = async (e: React.MouseEvent<HTMLButtonElement>) => {
     try {
       stopListening();
-      // Use `e.currentTarget` which is of type `HTMLButtonElement`
       const button = e.currentTarget;
       button.disabled = true;
 
@@ -221,7 +217,7 @@ export const Model: React.FC<ModelProps> = ({
         });
         console.log("Task created:", response.data);
   
-        if (todoId && selectedEmails.length > 0) {debugger
+        if (todoId && selectedEmails.length > 0) {
           for (const email of selectedEmails) {
             const friend = friends.find(friend => friend.email === email);
             if (friend) {

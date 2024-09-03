@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, ReactNode } from "react";
 import axios from "axios";
 import { Model, SyncAcc } from "./modal";
 import { useNavigate } from "react-router-dom";
@@ -95,7 +95,7 @@ export const Todos = () => {
   const { isListening, transcript, startListening, stopListening } =
     useSpeechToText({ continuous: true });
 
-  const startStopListening = (e: any) => {
+    const startStopListening = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     document.getElementById("titleInput")?.focus();
     isListening ? stopVoiceInput(e) : startListening();
@@ -125,7 +125,7 @@ export const Todos = () => {
     };
   }, []);
 
-  const stopVoiceInput = async (e: any) => {
+  const stopVoiceInput = async () => {
     try {
       console.log("transcript", transcript);
       if (transcript === "") {
@@ -290,124 +290,125 @@ export const Todos = () => {
       });
     }
   };
+
+  function getDayNumber(day: string): number {
+    const daysMap: { [key: string]: number } = {
+      sunday: 0,
+      monday: 1,
+      tuesday: 2,
+      wednesday: 3,
+      thursday: 4,
+      friday: 5,
+      saturday: 6,
+    };
+    return daysMap[day];
+  }
+  
+
   const fetchTodos = async (userId) => {
     setIsLoading(true);
     userDetails();
     const notificationSchedulerService = NotificationSchedulerService();
 
-    await axios
-      .get("http://localhost:3000/api/v1/todos", {
+    try {
+      const todosResponse = await axios.get("http://localhost:3000/api/v1/todos", {
         withCredentials: true,
         headers: {
           "Access-Control-Allow-Origin": "*",
         },
-      })
-      .then(async (response) => {
-        // const allTodos = response.data;
-        const sharedTodo = await axios.get(`http://localhost:3000/api/v1/shared-todos/${userId}`, {
-                          withCredentials: true,
-                          headers: {
-                              "Content-Type": "application/json",
-                          },
-                      });
-        const allTodos = [...sharedTodo.data, ...response.data]
+      });
 
-        axios
-          .get("http://localhost:3000/events", {
-            withCredentials: true,
-            headers: {
-              "Access-Control-Allow-Origin": "*",
+      const sharedTodosResponse = await axios.get(`http://localhost:3000/api/v1/shared-todos/${userId}`, {
+        withCredentials: true,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const allTodos = [...sharedTodosResponse.data, ...todosResponse.data];
+      const uniqueTodos = Array.from(new Map(allTodos.map(todo => [todo.id, todo])).values());
+
+      const eventsResponse = await axios.get("http://localhost:3000/events", {
+        withCredentials: true,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+        },
+      });
+
+      const combinedTodos = [...uniqueTodos, ...eventsResponse.data];
+      setTodos(combinedTodos); 
+      setAllTasksCount(combinedTodos.length);
+
+      combinedTodos.forEach((task) => {
+        if (!filterMail.includes(task.email)) {
+          setfilterMail((prev) => [...prev, task.email]);
+        }
+        const dueDate = new Date(task.dueDate).toDateString() + " " + "09:00";
+        const dueDateTimestamp = new Date(dueDate).getTime();
+        notificationSchedulerService.scheduleNotification(
+          `Task Reminder: ${task.title}`,
+          {
+            body: `Description: ${task.description}`,
+          },
+          dueDateTimestamp
+        );
+
+        const reminderDays = task?.reminderDays?.map((day: any) =>
+          getDayNumber(day.toLowerCase())
+        );
+        const reminderTime = task?.reminderTime || "00:00:00";
+
+        reminderDays?.forEach((day: any) => {
+          const reminderDate = new Date();
+          const today = new Date();
+          const dayDiff = (day - today.getDay() + 7) % 7;
+          reminderDate.setDate(reminderDate.getDate() + dayDiff);
+          const [hours, minutes, seconds] = reminderTime.split(":");
+          reminderDate.setHours(parseInt(hours));
+          reminderDate.setMinutes(parseInt(minutes));
+
+          notificationSchedulerService.scheduleNotification(
+            `Task Reminder: ${task.title}`,
+            {
+              body: `Description: ${task.description}`,
             },
-          })
-          .then((eventResponse) => {
-            const calendarEvents = eventResponse.data;
-            const combinedTodos = [...allTodos, ...calendarEvents];
-
-            setTodos(combinedTodos);
-            setAllTasksCount(combinedTodos.length);
-
-            combinedTodos.forEach((task) => {
-              if (!filterMail.includes(task.email)) {
-                setfilterMail((prev) => [...prev, task.email]);
-              }
-              const dueDate =
-                new Date(task.dueDate).toDateString() + " " + "09:00";
-              const dueDateTimestamp = new Date(dueDate).getTime();
-              notificationSchedulerService.scheduleNotification(
-                `Task Reminder: ${task.title}`,
-                {
-                  body: `Description: ${task.description}`,
-                },
-                dueDateTimestamp
-              );
-
-              const reminderDays = task?.reminderDays?.map((day: any) =>
-                getDayNumber(day.toLowerCase())
-              );
-              const reminderTime = task?.reminderTime || "00:00:00";
-
-              reminderDays?.forEach((day: any) => {
-                const reminderDate = new Date();
-                const today = new Date();
-                const dayDiff = (day - today.getDay() + 7) % 7;
-                reminderDate.setDate(reminderDate.getDate() + dayDiff);
-                const [hours, minutes, seconds] = reminderTime.split(":");
-                reminderDate.setHours(parseInt(hours));
-                reminderDate.setMinutes(parseInt(minutes));
-
-                notificationSchedulerService.scheduleNotification(
-                  `Task Reminder: ${task.title}`,
-                  {
-                    body: `Description: ${task.description}`,
-                  },
-                  reminderDate.getTime()
-                );
-              });
-            });
-
-            function getDayNumber(day: string) {
-              const daysMap: { [key: string]: number } = {
-                sunday: 0,
-                monday: 1,
-                tuesday: 2,
-                wednesday: 3,
-                thursday: 4,
-                friday: 5,
-                saturday: 6,
-              };
-              return daysMap[day];
-            }
-          })
-          .catch((error) => {
-            console.error("Error fetching calendar events:", error);
-            toast.error("Error fetching calendar events", {
-              position: "top-right",
-              autoClose: 3000,
-              hideProgressBar: true,
-              closeOnClick: true,
-              pauseOnHover: true,
-              draggable: true,
-              progress: undefined,
-              theme: "light",
-            });
-          }).finally(() => {
-            setIsLoading(false); // End loading
-          })
-      })
-      .catch((error) => {
-        navigate("/signin");
-        console.error("Error fetching todos:", error);
-        toast.error(error.response.data.message || "there is some error while fetching the todos", {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: true,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-          theme: "light",
+            reminderDate.getTime()
+          );
         });
-      })
+      });
+
+    } catch (error) {
+      console.error("Error fetching calendar events:", error);
+      toast.error("Error fetching calendar events", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: true,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+
+    try {
+      // ... (Add fetchTodos logic here if needed)
+    } catch (error) {
+      navigate("/signin");
+      console.error("Error fetching todos:", error);
+      toast.error(error.response?.data?.message || "There is some error while fetching the todos", {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: true,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+      });
+    }
 
     if (Notification.permission !== "granted") {
       Notification.requestPermission();
@@ -1003,17 +1004,19 @@ export const Todos = () => {
   };
 
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const fname = e.target.querySelectorAll('input[id="fname"]')[0].value;
-    const lname = e.target.querySelectorAll('input[id="lname"]')[0].value;
-    const mobilenumber = e.target.querySelectorAll('input[id="mobilenumber"]')[0].value;
-    const cpass = e.target.querySelectorAll('input[id="cpassword"]')[0].value;
-    const newpass = e.target.querySelectorAll('input[id="new-password"]')[0].value;
+    const form = e.target as HTMLFormElement;
+
+    const fname = (form.querySelector('input[id="fname"]') as HTMLInputElement).value;
+    const lname = (form.querySelector('input[id="lname"]') as HTMLInputElement).value;
+    const mobileNumber = (form.querySelector('input[id="mobilenumber"]') as HTMLInputElement).value;
+    const cpass = (form.querySelector('input[id="cpassword"]') as HTMLInputElement).value;
+    const newpass = (form.querySelector('input[id="new-password"]') as HTMLInputElement).value;
 
     const userData = {
-      Fname,
-      Lname,
+      Fname: fname,
+      Lname: lname,
       profileImg: profileImgPreview,
       currentpass: cpass,
       newPass: newpass,
@@ -1091,7 +1094,6 @@ export const Todos = () => {
     setmobileNumber(userDetail.mobileNumber);
     setProfileImgPreview(userDetail.profileImg);
     setUserInfo(userDetail);
-    console.log(userDetail);
 
   }
   const toggleDarkMode = () => {
@@ -1251,7 +1253,7 @@ export const Todos = () => {
         aria-label="Sidebar"
       >
         <button className="float-right mt-3" onClick={handleToggle}>{toggleNav}</button>
-        <div className="h-[450pt] px-3 pb-4 overflow-y-auto bg-white dark:bg-gray-800">
+        <div className="h-[600pt] px-3 pb-4 overflow-y-auto bg-white dark:bg-gray-800">
           <ul className="space-y-2 font-medium">
             <li>
               <a
@@ -1900,7 +1902,7 @@ export const Todos = () => {
                           </div>
                           {friends.map((friend, index) => (
                             <article
-                              key={index}
+                            key={friend._id}
                               className="bg-slate-100 rounded-lg p-3 sm:p-4 flex text-left transition hover:shadow-lg hover:shadow-slate-300 dark:bg-slate-800 dark:hover:shadow-transparent flex-col w-full max-w-sm h-64" // Set fixed height here
                             >
                               <div className="flex flex-col flex-1">

@@ -87,7 +87,6 @@ router.get('/friends', verifyToken, async (req, res) => {
     try {
         const user = await User.findOne({ email: req.user.email }).populate('friends', 'email');
         res.json(user.friends);
-        console.log("the friends are", user.friends)
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

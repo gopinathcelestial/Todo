@@ -13,7 +13,6 @@ router.get('/todos', verifyToken, async (req, res) => {
     try {
         const userEmail = req.user.email;
         const todos = await Todo.find({ userEmail });
-        console.log('main todo',todos);
         res.json(todos);
         process.nextTick(() => todoNotifier.scheduleTodoNotification(todos));
 
@@ -27,7 +26,6 @@ router.post('/todos', verifyToken, async (req, res) => {
     try {
         const userEmail = req.user.email;
         const createdAt = new Date();
-        console.log(req.body)
         const { title, description, isCompleted, dueDate, reminderTime, reminderDays } = req.body;
         const todo = new Todo({
             id: Math.floor(Math.random() * 10000000000),
@@ -48,62 +46,51 @@ router.post('/todos', verifyToken, async (req, res) => {
 });
 
 
-router.get('/todos/:id', verifyToken, (req, res) => {
-    const userEmail = req.user.email;
-    Todo.findOne({ id: parseInt(req.params.id), userEmail })
-        .then((data) => {
-            if (data) res.status(200).json(data);
-            else res.status(404).send('Todo not found');
-        })
-        .catch(err => res.status(500).send(err.toString()));
+router.get('/todos/:id', verifyToken, async (req, res) => {
+    try {
+        const todo = await Todo.findOne({ id: parseInt(req.params.id), userEmail: req.user.email });
+        if (todo) res.status(200).json(todo);
+        else res.status(404).send('Todo not found');
+    } catch (error) {
+        res.status(500).send(error.toString());
+    }
 });
 
-router.delete('/todos/:id', verifyToken, (req, res) => {
-    const userEmail = req.user.email;
-    Todo.deleteOne({ id: parseInt(req.params.id), userEmail })
-        .then((result) => {
-            if (result.deletedCount === 0) {
-                res.status(404).send('Todo not found');
-            } else {
-                res.status(200).send('Todo deleted successfully');
-            }
-        })
-        .catch(err => res.status(500).send(err.toString()));
+
+router.delete('/todos/:id', verifyToken, async (req, res) => {
+    try {
+        const result = await Todo.deleteOne({ id: parseInt(req.params.id), userEmail: req.user.email });
+        if (result.deletedCount === 0) res.status(404).send('Todo not found');
+        else res.status(200).send('Todo deleted successfully');
+    } catch (error) {
+        res.status(500).send(error.toString());
+    }
 });
 
-router.put('/todos/:id', verifyToken, (req, res) => {
-    const userEmail = req.user.email;
-    Todo.updateOne({ id: parseInt(req.params.id), userEmail }, {
-        $set:
-        {
-            title: req.body.title,
-            description: req.body.description,
-            isCompleted: req.body.isCompleted,
-            dueDate: req.body.dueDate,
-            reminderDays: req.body.reminderDays,
-            reminderTime: req.body.reminderTime
-        }
-    })
-        .then((data) => {
-            if (data.nModified === 0) {
-                res.status(404).send('Todo not found');
-            } else {
-                res.status(200).send('Todo updated successfully');
+
+router.put('/todos/:id', verifyToken, async (req, res) => {
+    try {
+        const result = await Todo.updateOne(
+            { id: parseInt(req.params.id), userEmail: req.user.email },
+            {
+                $set: req.body
             }
-        })
-        .catch(err => res.status(500).send(err.toString()));
+        );
+        if (result.nModified === 0) res.status(404).send('Todo not found');
+        else res.status(200).send('Todo updated successfully');
+    } catch (error) {
+        res.status(500).send(error.toString());
+    }
 });
+
 
 router.get('/shared-todos/:userId', verifyToken, async (req, res) => {
     try {
         const user = await User.findOne({ email: req.user.email }).populate('sharedTodos');
-        // console.log('the friend have sent you the ine remider od the todo',user)
-        console.log('shareTodo', user.sharedTodos)
         res.json(user.sharedTodos);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
-
 
 module.exports = router;
