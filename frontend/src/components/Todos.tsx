@@ -782,8 +782,18 @@ export const Todos = () => {
 
   const handleCalendarViewClick = () => {
     const updatedCalendarEvents = todos.map((task) => {
-      const startDate = new Date(task.dueDate);
-
+      let startDate;
+      if (typeof task.dueDate === 'string' && task.dueDate.trim() !== '') {
+        const parsedDate = new Date(task.dueDate);
+        if (!isNaN(parsedDate.getTime())) {
+          startDate = parsedDate;
+        }
+      }
+  
+      if (!startDate) {
+        startDate = new Date();
+      }
+  
       return {
         title: task.title,
         date: startDate.toISOString().split("T")[0],

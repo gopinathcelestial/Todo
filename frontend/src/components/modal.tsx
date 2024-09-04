@@ -44,7 +44,6 @@ export const Model: React.FC<ModelProps> = ({
   const [dueDate, setDueDate] = useState(initialDuedate || ""); // State for due date
   const [reminderTime, setReminderTime] = useState(initialReminderTime || ""); // State for reminder time
   const [reminderDays, setReminderDays] = useState(initialReminderDays || []); // State for reminder days
-  // const [isCompleted, setIsCompleted] = useState(initialIsCompleted || false);
   const [showDueDate, setShowDueDate] = useState(false);
   const [showReminderTime, setShowReminderTime] = useState(false);
   const [showReminderDays, setShowReminderDays] = useState(false);
@@ -53,7 +52,6 @@ export const Model: React.FC<ModelProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEmails, setSelectedEmails] = useState([]);
   const [filteredFriends, setFilteredFriends] = useState([]);
-  const [sharedTodos, setSharedTodos] = useState([]);
 
   const { isListening, transcript, startListening, stopListening } =
     useSpeechToText({ continuous: true });
@@ -65,21 +63,21 @@ export const Model: React.FC<ModelProps> = ({
 
   const toggleInput = () => setShowInput(prev => !prev);
 
-  const handleEmailSelect = (email) => {
+  const handleEmailSelect =  (email: string) => {
     if (!selectedEmails.includes(email)) {
       setSelectedEmails([...selectedEmails, email]);
     }
     setSearchTerm('');
   };
 
-  const removeEmail = (email) => {
+  const removeEmail = (email: string) => {
     setSelectedEmails(selectedEmails.filter(e => e !== email));
   };
 
-  const handleSearchChange = (e) => {
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
-    const filtered = []; 
+    const filtered: string[] = [];
     setFilteredFriends(filtered);
   };
 
@@ -94,7 +92,7 @@ export const Model: React.FC<ModelProps> = ({
         });
         const friendIds = userResponse.data.friends;
 
-        const friendDetailsPromises = friendIds.map(id =>
+        const friendDetailsPromises = friendIds.map((id: string) =>
           axios.get(`http://localhost:3000/auth/user/${id}`, {
             withCredentials: true,
             headers: {
