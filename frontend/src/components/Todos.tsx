@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect, ReactNode } from "react";
 import axios from "axios";
 import { Model, SyncAcc } from "./modal";
@@ -81,7 +83,6 @@ export const Todos = () => {
   const [isAddFriendsOpen, setIsAddFriendsOpen] = useState(false);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [isPopupVisible, setPopupVisible] = useState(false);
-  const [sharedTodos, setSharedTodos] = useState<Todo[]>([]);
   const [friends, setFriends] = useState<{
     Fname: ReactNode;
     Lname: ReactNode;
@@ -95,7 +96,7 @@ export const Todos = () => {
   const { isListening, transcript, startListening, stopListening } =
     useSpeechToText({ continuous: true });
 
-    const startStopListening = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const startStopListening: React.MouseEventHandler<SVGSVGElement> = (e) => {
     e.preventDefault();
     document.getElementById("titleInput")?.focus();
     isListening ? stopVoiceInput(e) : startListening();
@@ -108,15 +109,18 @@ export const Todos = () => {
 
   useEffect(() => {
     const eventSource = new EventSource('http://localhost:3000/api/v1/sseevents');
-    eventSource.onmessage = (event) => {
+    eventSource.onmessage = async (event) => {
       const newMessage = JSON.parse(event.data);
       console.log('New message from server:', newMessage);
-      setTimeout(() => {
+
+      const showNotification = async () => {
         const notification = new Notification(newMessage.message);
-        setTimeout(() => {
-          notification.close()
-        }, 5000);
-      }, 0);
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+        notification.close();
+      };
+
+      // Immediately start the notification process asynchronously
+      await showNotification();
       toast.info(newMessage.message);
     };
 
@@ -303,7 +307,7 @@ export const Todos = () => {
     };
     return daysMap[day];
   }
-  
+
 
   const fetchTodos = async (userId) => {
     setIsLoading(true);
@@ -336,7 +340,7 @@ export const Todos = () => {
       });
 
       const combinedTodos = [...uniqueTodos, ...eventsResponse.data];
-      setTodos(combinedTodos); 
+      setTodos(combinedTodos);
       setAllTasksCount(combinedTodos.length);
 
       combinedTodos.forEach((task) => {
@@ -789,11 +793,11 @@ export const Todos = () => {
           startDate = parsedDate;
         }
       }
-  
+
       if (!startDate) {
         startDate = new Date();
       }
-  
+
       return {
         title: task.title,
         date: startDate.toISOString().split("T")[0],
@@ -1092,11 +1096,11 @@ export const Todos = () => {
 
     const userDetail = {
       email: response.data.email,
-      fname: response.data.Fname,
-      lname: response.data.Lname,
+      fname: response.data.Fname || '',
+      lname: response.data.Lname || '',
       password: response.data.password,
       profileImg: response.data.profileImg,
-      mobileNumber: response.data.mobileNumber
+      mobileNumber: response.data.mobileNumber || ''
     };
 
     setFname(userDetail.fname);
@@ -1200,7 +1204,7 @@ export const Todos = () => {
                       className="absolute top-2 right-2 text-gray-500 cursor-pointer"
                       onClick={() => setPopupVisible(false)}
                     />
-                    <h4 className="text-lg font-semibold">Friend Requests</h4>
+                    <h4 className="text-lg font-semibold">Friend Requests From</h4>
                     <ul>
                       {friendRequests.length > 0 ? (
                         friendRequests.map((request) => (
@@ -1415,7 +1419,7 @@ export const Todos = () => {
       </aside>
 
       <div id="mainpage" className={`p-4 pt-7 ${themeClass}`}>
-        <div className={`p-4 border-2 border-gray-200 border-dashed rounded-lg dark:border-gray-700 mt-14 ${margin}`}>
+        <div className={`p-4 border-2 border-gray-200 border-dashed rounded-lg dark:border-gray-700 mt-4 ${margin}`}>
           <Model
             isOpen={isModalOpen}
             onClose={() => setIsModalOpen(false)}
@@ -1901,7 +1905,7 @@ export const Todos = () => {
                       {isLoading ? (
                         <Skeletonmask viewprop={viewProp} />
                       ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4 ml-12">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-1">
                           <div>
                             <button
                               className="border-2 border-slate-300 text-slate-400 w-full max-w-sm rounded-lg border-dashed transition hover:bg-slate-300 hover:text-slate-500 dark:border-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-300 h-52 sm:h-64"
@@ -1912,7 +1916,7 @@ export const Todos = () => {
                           </div>
                           {friends.map((friend, index) => (
                             <article
-                            key={friend._id}
+                              key={friend._id}
                               className="bg-slate-100 rounded-lg p-3 sm:p-4 flex text-left transition hover:shadow-lg hover:shadow-slate-300 dark:bg-slate-800 dark:hover:shadow-transparent flex-col w-full max-w-sm h-64" // Set fixed height here
                             >
                               <div className="flex flex-col flex-1">
@@ -1928,16 +1932,16 @@ export const Todos = () => {
                                 <div className="flex-1"></div>
                                 <div className="relative group flex">
                                   <img
-                                    className="w-8 h-8 rounded-full"
+                                    className="w-7 h-7 mr-2 rounded-full"
                                     src={friend.profileImg || "default-profile-image-url"}
                                   />
-                                  <div>
+                                  <div className="m-1">
                                     <Dropdown
                                       label=""
                                       dismissOnClick={true}
                                       renderTrigger={() => (
                                         <svg
-                                          className="w-5 h-5"
+                                          className="w-4 h-4"
                                           aria-hidden="true"
                                           xmlns="http://www.w3.org/2000/svg"
                                           fill="currentColor"

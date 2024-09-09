@@ -1,3 +1,5 @@
+/* eslint-disable prefer-const */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 interface NotificationScheduler {
   scheduleNotification: (title: string, options: NotificationOptions, time: number) => void;
 }
@@ -18,7 +20,7 @@ const NotificationSchedulerService = (): NotificationScheduler => {
 
     const showError = () => {
       const error = document.querySelector('.error');
-      if (error) {
+      if (error instanceof HTMLElement) {
         error.style.display = 'block';
         error.textContent = 'You blocked the notifications';
       }

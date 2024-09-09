@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/rules-of-hooks */
 import React, { useState, useEffect } from "react";
 import axios from "axios";
@@ -38,9 +39,7 @@ export const Model: React.FC<ModelProps> = ({
   // State for the form inputs
   if (!isOpen) return null;
   const [taskTitle, setTaskTitle] = useState(initialTaskTitle || "");
-  const [taskDescription, setTaskDescription] = useState(
-    initialTaskDescription || ""
-  );
+  const [taskDescription, setTaskDescription] = useState(initialTaskDescription || "");
   const [dueDate, setDueDate] = useState(initialDuedate || ""); // State for due date
   const [reminderTime, setReminderTime] = useState(initialReminderTime || ""); // State for reminder time
   const [reminderDays, setReminderDays] = useState(initialReminderDays || []); // State for reminder days
@@ -48,38 +47,73 @@ export const Model: React.FC<ModelProps> = ({
   const [showReminderTime, setShowReminderTime] = useState(false);
   const [showReminderDays, setShowReminderDays] = useState(false);
   const [showInput, setShowInput] = useState(false);
-  const [friends, setFriends] = useState<{ id: string, email: string }[]>([]);
+  const [friends, setFriends] = useState<{_id: any; id: string, email: string }[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedEmails, setSelectedEmails] = useState([]);
-  const [filteredFriends, setFilteredFriends] = useState([]);
-
-  const { isListening, transcript, startListening, stopListening } =
-    useSpeechToText({ continuous: true });
+  const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+  const [isEmailInvalid, setIsEmailInvalid] = useState(false);
+  const [filteredFriends, setFilteredFriends] = useState<{ _id: any; id: string; email: string }[]>([]);
+  const { isListening, transcript, startListening, stopListening } = useSpeechToText({ continuous: true });
   const startStopListening = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
+
     document.getElementById("titleInput")?.focus();
     isListening ? stopVoiceInput(e) : startListening();
   };
 
   const toggleInput = () => setShowInput(prev => !prev);
 
-  const handleEmailSelect =  (email: string) => {
+  const handleEmailSelect = (email: string) => {
+    const friendExists = friends.some(friend => friend.email === email);
+  
+    if (!friendExists) {
+      setIsEmailInvalid(true); // Show error if email is not registered
+      return;
+    }
+  
     if (!selectedEmails.includes(email)) {
       setSelectedEmails([...selectedEmails, email]);
+      setIsEmailInvalid(false); // Reset error if email is valid
     }
-    setSearchTerm('');
+    setSearchTerm(''); // Clear the input field
   };
+  
+  
+
+ // Utility function to validate email format
+const isValidEmail = (email: string) => {
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailPattern.test(email);
+};
+
+const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const value = e.target.value;
+  setSearchTerm(value);
+
+  if (value && isValidEmail(value)) {
+    // Filter friends based on the full email
+    const matchingFriend = friends.find(friend => friend.email.toLowerCase() === value.toLowerCase());
+
+    // If the email is valid but doesn't match any friend, show the error
+    if (!matchingFriend) {
+      setIsEmailInvalid(true);
+    } else {
+      setIsEmailInvalid(false); // Reset error if a match is found
+    }
+
+    setFilteredFriends(matchingFriend ? [matchingFriend] : []);
+  } else {
+    setFilteredFriends([]);
+    setIsEmailInvalid(false); // Reset error when input is invalid or cleared
+  }
+};
 
   const removeEmail = (email: string) => {
     setSelectedEmails(selectedEmails.filter(e => e !== email));
   };
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchTerm(value);
-    const filtered: string[] = [];
-    setFilteredFriends(filtered);
-  };
+  
+  
+  
+  
 
   useEffect(() => {
     const fetchFriends = async () => {
@@ -255,7 +289,7 @@ export const Model: React.FC<ModelProps> = ({
             },
           }
         );
-        todoId = id;
+        // todoId = id;
         toast.success("Task modified successfully", {
           position: "top-right",
           autoClose: 3000,
@@ -478,7 +512,6 @@ export const Model: React.FC<ModelProps> = ({
                 <input
                   type="text"
                   placeholder="e.g., guest@gmail.com"
-                  // required
                   className="w-full pl-2 mt-1"
                   value={searchTerm}
                   onChange={handleSearchChange}
@@ -495,6 +528,9 @@ export const Model: React.FC<ModelProps> = ({
                       </li>
                     ))}
                   </ul>
+                )}
+                {isEmailInvalid && (
+                  <div className="text-red-500 mt-2">Email is not registered!</div>
                 )}
                 {selectedEmails.length > 0 && (
                   <div className="mt-2">
